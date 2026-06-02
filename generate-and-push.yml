@@ -15,7 +15,7 @@
 
     # Git configuration
     git_repo_path: "/home/gmadappa/ansible/ansible-sage-demo/generated-playbooks"
-    git_remote_url: "https://github.com/iamgini/ansible-sage-generated-playbooks"
+    git_remote_url: "https://github.com/iamgini/ansible-ai-generated-playbooks"
     git_token: "{{ lookup('env', 'GIT_TOKEN') }}"  # Read from environment variable
     git_username: "iamgini"
     git_email: "net.gini@gmail.com"
@@ -130,12 +130,14 @@
 
     - name: Pull remote changes before push
       ansible.builtin.shell: |
-        git pull https://{{ git_username }}:{{ lookup('env', 'GIT_TOKEN') }}@{{ git_remote_url | regex_replace('https://', '') }} main --allow-unrelated-histories --no-edit || true
+        git pull https://{{ git_username }}:{{ lookup('env', 'GIT_TOKEN') }}@{{ git_remote_url | regex_replace('https://', '') }} main --rebase --allow-unrelated-histories
       args:
         chdir: "{{ git_repo_path }}"
       when:
         - git_token | length > 0
         - git_commit.changed
+      register: git_pull
+      failed_when: false
       changed_when: false
 
     - name: Push to Git repository
