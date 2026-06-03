@@ -4,7 +4,8 @@
       "WebFetch(domain:www.redhat.com)",
       "WebFetch(domain:github.com)",
       "Bash(chmod +x *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }
