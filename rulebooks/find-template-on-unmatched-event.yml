@@ -1,0 +1,49 @@
+---
+- name: Find matching job template for unmatched events
+  hosts: all
+  sources:
+    - name: Listen for webhook events
+      ansible.eda.webhook:
+        host: 0.0.0.0
+        port: 5000
+
+    # Alternative: Listen to Kafka events
+    # - name: Listen for Kafka events
+    #   ansible.eda.kafka:
+    #     host: localhost
+    #     port: 9092
+    #     topic: automation-events
+
+  rules:
+    # Specific rule examples - add your actual matching rules here
+    - name: High severity alert on production servers
+      condition: event.payload.severity == "critical" and event.payload.environment == "production"
+      action:
+        run_job_template:
+          name: "Emergency Response - Production"
+          organization: "Default"
+
+    - name: Disk space alert
+      condition: event.payload.alert_type == "disk_space" and event.payload.usage | int > 90
+      action:
+        run_job_template:
+          name: "Cleanup Disk Space"
+          organization: "Default"
+
+    # Catch-all rule: If no specific rules match, find suitable job template
+    - name: Find matching job template for unmatched event
+      condition: event.payload is defined
+      action:
+        run_playbook:
+          name: playbooks/find-matching-job-template.yml
+          extra_vars:
+            ansible_eda:
+              event: "{{ event }}"
+          verbosity: 1
+
+    # Optional: Log all unmatched events for analysis
+    - name: Log unmatched event for review
+      condition: event is defined
+      action:
+        debug:
+          msg: "Event received but no specific rule matched: {{ event }}"

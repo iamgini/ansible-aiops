@@ -1,0 +1,25 @@
+---
+# Inventory for Ansible EDA and playbook execution
+all:
+  hosts:
+    localhost:
+      ansible_connection: local
+      ansible_python_interpreter: "{{ ansible_playbook_python }}"
+
+  vars:
+    # MCP Configuration
+    mcp_server_url: "{{ lookup('env', 'AAP_MCP_SERVER_URL') | default('http://localhost:3000/mcp', true) }}"
+    aap_bearer_token: "{{ lookup('env', 'AAP_BEARER_TOKEN') }}"
+
+    # AAP Controller Configuration (alternative to MCP)
+    controller_host: "{{ lookup('env', 'CONTROLLER_HOST') | default('', true) }}"
+    controller_username: "{{ lookup('env', 'CONTROLLER_USERNAME') | default('', true) }}"
+    controller_password: "{{ lookup('env', 'CONTROLLER_PASSWORD') | default('', true) }}"
+    controller_verify_ssl: "{{ lookup('env', 'CONTROLLER_VERIFY_SSL') | default('false', true) }}"
+
+    # Git Configuration
+    git_token: "{{ lookup('env', 'GIT_TOKEN') }}"
+    git_remote_url: "{{ lookup('env', 'GIT_REMOTE_URL') | default('', true) }}"
+
+    # Maya Configuration
+    maya_api_url: "{{ lookup('env', 'MAYA_API_URL') | default('http://localhost:8000', true) }}"

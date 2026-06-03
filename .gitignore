@@ -1,0 +1,35 @@
+# Environment variables (contains secrets)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Ansible
+*.retry
+.ansible/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated playbooks (optional - remove if you want to track them)
+# generated-playbooks/playbooks/*.yml
+
+# Temporary files
+*.tmp
+*.bak

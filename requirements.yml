@@ -1,0 +1,20 @@
+---
+collections:
+  # MCP Collection for interacting with AAP via MCP server
+  - name: ansible.mcp
+    version: ">=1.0.0"
+
+  # Utils collection (dependency of ansible.mcp)
+  - name: ansible.utils
+    version: ">=2.0.0"
+
+  # AAP Configuration collections
+  - name: ansible.platform
+    version: ">=1.0.0"
+
+  - name: ansible.controller
+    version: ">=4.5.0"
+
+  # EDA collection for event-driven automation
+  - name: ansible.eda
+    version: ">=1.0.0"

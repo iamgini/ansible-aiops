@@ -1,0 +1,174 @@
+---
+- name: Find Matching Job Template for EDA Event
+  hosts: localhost
+  gather_facts: false
+  connection: local
+
+  vars:
+    # MCP server connection details
+    mcp_server_url: "{{ lookup('env', 'AAP_MCP_SERVER_URL') | default('http://localhost:3000/mcp', true) }}"
+    aap_bearer_token: "{{ lookup('env', 'AAP_BEARER_TOKEN') }}"
+
+    # Event data from EDA (passed as extra vars)
+    event_type: "{{ ansible_eda.event.type | default('unknown') }}"
+    event_source: "{{ ansible_eda.event.source | default('unknown') }}"
+    event_payload: "{{ ansible_eda.event.payload | default({}) }}"
+    event_hostname: "{{ ansible_eda.event.payload.hostname | default('') }}"
+    event_service: "{{ ansible_eda.event.payload.service | default('') }}"
+    event_severity: "{{ ansible_eda.event.payload.severity | default('') }}"
+    event_tags: "{{ ansible_eda.event.payload.tags | default([]) }}"
+
+  tasks:
+    - name: Display event information
+      ansible.builtin.debug:
+        msg:
+          - "Event Type: {{ event_type }}"
+          - "Event Source: {{ event_source }}"
+          - "Hostname: {{ event_hostname }}"
+          - "Service: {{ event_service }}"
+          - "Severity: {{ event_severity }}"
+          - "Tags: {{ event_tags }}"
+
+    - name: Get available MCP tools from AAP server
+      ansible.mcp.tools_info:
+        server_url: "{{ mcp_server_url }}"
+        auth_token: "{{ aap_bearer_token }}"
+      register: mcp_tools_result
+      when: aap_bearer_token is defined and aap_bearer_token | length > 0
+
+    - name: Display available MCP tools
+      ansible.builtin.debug:
+        msg: "Available tools: {{ mcp_tools_result.tools | map(attribute='name') | list }}"
+      when: mcp_tools_result is defined and mcp_tools_result.tools is defined
+
+    - name: Query all job templates from AAP via MCP
+      ansible.mcp.run_tool:
+        server_url: "{{ mcp_server_url }}"
+        auth_token: "{{ aap_bearer_token }}"
+        tool_name: "controller_api_v2_job_templates_list"
+        tool_arguments: {}
+      register: job_templates_result
+      when: aap_bearer_token is defined and aap_bearer_token | length > 0
+
+    - name: Parse job templates from response
+      ansible.builtin.set_fact:
+        all_job_templates: "{{ job_templates_result.result.results | default([]) }}"
+      when: job_templates_result is defined and job_templates_result.result is defined
+
+    - name: Display total job templates found
+      ansible.builtin.debug:
+        msg: "Found {{ all_job_templates | length }} job templates in AAP"
+      when: all_job_templates is defined
+
+    - name: Find matching job templates based on event
+      ansible.builtin.set_fact:
+        matched_templates: >-
+          {{
+            all_job_templates | selectattr('name', 'defined') | list |
+            selectattr('name', 'search', event_type | regex_escape) | list +
+            all_job_templates | selectattr('description', 'defined') | list |
+            selectattr('description', 'search', event_service | regex_escape) | list +
+            all_job_templates | selectattr('name', 'defined') | list |
+            selectattr('name', 'search', event_hostname | regex_escape) | list
+          }}
+      when:
+        - all_job_templates is defined
+        - all_job_templates | length > 0
+
+    - name: Remove duplicate matches
+      ansible.builtin.set_fact:
+        unique_matched_templates: "{{ matched_templates | unique | list }}"
+      when: matched_templates is defined
+
+    - name: Score and rank job templates by relevance
+      ansible.builtin.set_fact:
+        scored_templates: >-
+          {% set templates = [] %}
+          {% for template in (unique_matched_templates | default([])) %}
+            {% set score = 0 %}
+            {% set name_lower = (template.name | default('')) | lower %}
+            {% set desc_lower = (template.description | default('')) | lower %}
+            {% set event_type_lower = event_type | lower %}
+            {% set event_service_lower = event_service | lower %}
+
+            {# Exact name match = 50 points #}
+            {% if event_type_lower in name_lower %}
+              {% set score = score + 50 %}
+            {% endif %}
+
+            {# Service name in template name = 40 points #}
+            {% if event_service_lower and event_service_lower in name_lower %}
+              {% set score = score + 40 %}
+            {% endif %}
+
+            {# Hostname match = 30 points #}
+            {% if event_hostname and event_hostname in name_lower %}
+              {% set score = score + 30 %}
+            {% endif %}
+
+            {# Description matches = 20 points each #}
+            {% if event_type_lower in desc_lower %}
+              {% set score = score + 20 %}
+            {% endif %}
+            {% if event_service_lower and event_service_lower in desc_lower %}
+              {% set score = score + 20 %}
+            {% endif %}
+
+            {# Tag matches in name or description = 10 points per tag #}
+            {% for tag in event_tags %}
+              {% if tag | lower in name_lower or tag | lower in desc_lower %}
+                {% set score = score + 10 %}
+              {% endif %}
+            {% endfor %}
+
+            {# Severity-based keywords = 15 points #}
+            {% if event_severity | lower == 'critical' and ('critical' in name_lower or 'emergency' in name_lower) %}
+              {% set score = score + 15 %}
+            {% elif event_severity | lower == 'high' and ('high' in name_lower or 'urgent' in name_lower) %}
+              {% set score = score + 15 %}
+            {% endif %}
+
+            {% set _ = templates.append({
+              'id': template.id,
+              'name': template.name,
+              'description': template.description | default(''),
+              'project': template.summary_fields.project.name | default(''),
+              'inventory': template.summary_fields.inventory.name | default(''),
+              'score': score,
+              'url': template.url | default('')
+            }) %}
+          {% endfor %}
+          {{ templates | sort(attribute='score', reverse=True) }}
+      when: unique_matched_templates is defined and unique_matched_templates | length > 0
+
+    - name: Display top 5 recommended job templates
+      ansible.builtin.debug:
+        msg:
+          - "=== RECOMMENDED JOB TEMPLATES FOR EVENT ==="
+          - "Event: {{ event_type }} from {{ event_source }}"
+          - ""
+          - "{% for template in (scored_templates | default([]))[:5] %}"
+          - "{{ loop.index }}. {{ template.name }} (Score: {{ template.score }})"
+          - "   Description: {{ template.description }}"
+          - "   Project: {{ template.project }}"
+          - "   Inventory: {{ template.inventory }}"
+          - "   Template ID: {{ template.id }}"
+          - ""
+          - "{% endfor %}"
+      when: scored_templates is defined and scored_templates | length > 0
+
+    - name: No matching templates found
+      ansible.builtin.debug:
+        msg:
+          - "No matching job templates found for this event."
+          - "Consider creating a new job template or updating rule matching."
+      when: scored_templates is not defined or scored_templates | length == 0
+
+    - name: Return best match for EDA integration
+      ansible.builtin.set_stats:
+        data:
+          recommended_template_id: "{{ (scored_templates | first).id if (scored_templates | default([]) | length > 0) else None }}"
+          recommended_template_name: "{{ (scored_templates | first).name if (scored_templates | default([]) | length > 0) else None }}"
+          match_score: "{{ (scored_templates | first).score if (scored_templates | default([]) | length > 0) else 0 }}"
+          total_candidates: "{{ scored_templates | default([]) | length }}"
+      when: scored_templates is defined

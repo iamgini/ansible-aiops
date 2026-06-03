@@ -1,23 +1,65 @@
-# Ansible AI Gateway Demo
+# Ansible AIOps Demo
 
-Client project that uses Ansible AI Gateway to generate playbooks and push them to Git.
+Intelligent event-driven automation using Ansible EDA, MCP (Model Context Protocol), and AI-powered playbook generation.
+
+## Features
+
+- **AI-Powered Playbook Generation**: Uses Ansible Maya to generate playbooks based on events
+- **Intelligent Job Template Matching**: MCP integration to find suitable AAP job templates for events
+- **Event-Driven Automation**: EDA rulebooks for automated responses
+- **Git Integration**: Automatic commit and push of generated playbooks
 
 ## Setup
 
-1. **Set your Git token as environment variable:**
-   ```bash
-   export GIT_TOKEN="ghp_your_github_token_here"
-   ```
+### 1. Install Dependencies
 
-2. **Edit `generate-and-push.yml` and update:**
-   - `git_remote_url`: Your Git repository URL
-   - `event_type`: Type of event to generate playbook for
-   - `event_description`: Event description
-   - `target_host`: Target hostname
+**Install required Ansible collections:**
+```bash
+ansible-galaxy collection install -r requirements.yml
+```
+
+**Required collections:**
+- `ansible.mcp` - MCP client for AAP integration
+- `ansible.utils` - Utility functions
+- `ansible.eda` - Event-driven automation
+- `ansible.controller` - AAP controller interaction
+
+### 2. Configure Environment
+
+**Copy and configure environment file:**
+```bash
+cp .env.example .env
+# Edit .env with your credentials
+```
+
+**Required environment variables:**
+```bash
+# For MCP Integration
+export AAP_MCP_SERVER_URL="http://localhost:3000/mcp"
+export AAP_BEARER_TOKEN="your_aap_bearer_token_here"
+
+# For Git Integration
+export GIT_TOKEN="ghp_your_github_token_here"
+```
+
+### 3. Configure AAP MCP Server
+
+See the [AAP MCP Server documentation](https://github.com/ansible/aap-mcp-server) for installation and configuration.
+
+**Quick start:**
+```bash
+# Install MCP server (requires AAP 2.6.4+)
+# Follow Red Hat documentation for your platform
+
+# Start MCP server
+# Server runs on port 3000 by default
+```
 
 ## Usage
 
-**Run the playbook:**
+### Playbook Generation (Maya)
+
+**Generate playbook using Maya:**
 ```bash
 ansible-playbook generate-and-push.yml
 ```
@@ -35,13 +77,73 @@ ansible-playbook generate-and-push.yml \
 ansible-playbook generate-and-push.yml --skip-tags git
 ```
 
-## What It Does
+### MCP-Based Job Template Matching
 
-1. Calls Ansible AI Gateway API with event details
-2. Receives AI-generated playbook
+**Find matching job templates for an event:**
+```bash
+ansible-playbook playbooks/find-matching-job-template.yml \
+  -e "event_type=disk_alert" \
+  -e "event_service=nginx" \
+  -e "event_hostname=web-server-01" \
+  -e "event_severity=high" \
+  -e 'event_tags=["web","production"]'
+```
+
+**Test the integration:**
+```bash
+./test-mcp-integration.sh
+```
+
+### Event-Driven Automation (EDA)
+
+**Run EDA rulebook:**
+```bash
+ansible-rulebook \
+  --rulebook rulebooks/find-template-on-unmatched-event.yml \
+  --inventory inventory.yml \
+  --verbose
+```
+
+**Send test event via webhook:**
+```bash
+curl -X POST http://localhost:5000/webhook \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "disk_alert",
+    "source": "monitoring_system",
+    "payload": {
+      "hostname": "web-server-01",
+      "service": "nginx",
+      "severity": "high",
+      "usage": 95,
+      "tags": ["web", "production"]
+    }
+  }'
+```
+
+## Architecture
+
+### Maya Playbook Generation
+1. Receives event details (type, description, target)
+2. Calls Ansible Maya API for AI-generated playbook
 3. Saves playbook to `generated-playbooks/playbooks/`
-4. Commits to local Git
-5. Pushes to remote repository
+4. Commits and pushes to Git repository
+
+### MCP Job Template Matching
+1. Receives event from EDA or direct invocation
+2. Queries AAP via MCP server for available job templates
+3. Matches templates against event attributes (type, service, hostname, severity, tags)
+4. Scores and ranks templates by relevance
+5. Returns top recommendations or auto-launches best match
+
+### Event-Driven Flow
+```
+Event Source → EDA Rulebook → Specific Rules Match?
+                                    ├── Yes → Run Job Template
+                                    └── No  → Find Match via MCP
+                                              ├── High Score → Auto-launch
+                                              └── Low Score → Show recommendations
+```
 
 ## Output
 
@@ -56,11 +158,24 @@ generated-playbooks/
 
 ## Requirements
 
-- Ansible AI Gateway service running on http://localhost:8000
-- Git installed
-- GitHub/GitLab Personal Access Token (for push)
+### Services
+- **Ansible Maya**: AI playbook generation service (http://localhost:8000)
+- **AAP MCP Server**: Model Context Protocol server for AAP (http://localhost:3000/mcp)
+- **Ansible Automation Platform**: Version 2.6.4+ with MCP support
+
+### Tools
+- Ansible Core 2.16+
+- Python 3.10+
+- Git
+- ansible-rulebook (for EDA)
+
+### Credentials
+- GitHub/GitLab Personal Access Token (for Git push)
+- AAP Bearer Token (for MCP authentication)
 
 ## Examples
+
+### Maya Playbook Generation
 
 **Disk full event:**
 ```bash
@@ -85,3 +200,61 @@ ansible-playbook generate-and-push.yml \
   -e "event_description='CPU usage at 98%'" \
   -e "target_host=app-server-01"
 ```
+
+### MCP Template Matching
+
+**Database performance issue:**
+```bash
+ansible-playbook playbooks/find-matching-job-template.yml \
+  -e "event_type=database_slow" \
+  -e "event_service=postgresql" \
+  -e "event_hostname=db-primary-01" \
+  -e "event_severity=critical" \
+  -e 'event_tags=["database","production","performance"]'
+```
+
+**Security alert:**
+```bash
+ansible-playbook playbooks/find-matching-job-template.yml \
+  -e "event_type=security_breach" \
+  -e "event_service=firewall" \
+  -e "event_hostname=fw-01" \
+  -e "event_severity=critical" \
+  -e 'event_tags=["security","network","intrusion"]'
+```
+
+## Documentation
+
+- **[EDA MCP Integration Guide](docs/EDA-MCP-INTEGRATION.md)** - Comprehensive guide for MCP integration
+- **[Ansible MCP Collection](https://github.com/ansible-collections/ansible.mcp)** - MCP collection documentation
+- **[AAP MCP Server](https://github.com/ansible/aap-mcp-server)** - MCP server for AAP
+
+## Project Structure
+
+```
+ansible-aiops/
+├── playbooks/
+│   └── find-matching-job-template.yml    # MCP-based template finder
+├── rulebooks/
+│   └── find-template-on-unmatched-event.yml  # EDA rulebook
+├── generated-playbooks/
+│   └── playbooks/                        # AI-generated playbooks
+├── docs/
+│   └── EDA-MCP-INTEGRATION.md           # Integration guide
+├── requirements.yml                      # Ansible collection requirements
+├── generate-and-push.yml                # Maya playbook generator
+├── test-mcp-integration.sh              # Test script
+└── .env.example                         # Environment template
+```
+
+## Contributing
+
+Contributions welcome! Areas of interest:
+- Enhanced scoring algorithms for template matching
+- Additional EDA event sources
+- Custom MCP tools for AAP
+- Integration with other monitoring systems
+
+## License
+
+See LICENSE file for details.
