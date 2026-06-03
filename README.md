@@ -1,6 +1,6 @@
-# Ansible Sage Demo
+# Ansible AI Gateway Demo
 
-Client project that uses Ansible Sage to generate playbooks and push them to Git.
+Client project that uses Ansible AI Gateway to generate playbooks and push them to Git.
 
 ## Setup
 
@@ -37,7 +37,7 @@ ansible-playbook generate-and-push.yml --skip-tags git
 
 ## What It Does
 
-1. Calls Ansible Sage API with event details
+1. Calls Ansible AI Gateway API with event details
 2. Receives AI-generated playbook
 3. Saves playbook to `generated-playbooks/playbooks/`
 4. Commits to local Git
@@ -56,7 +56,7 @@ generated-playbooks/
 
 ## Requirements
 
-- Ansible Sage service running on http://localhost:8000
+- Ansible AI Gateway service running on http://localhost:8000
 - Git installed
 - GitHub/GitLab Personal Access Token (for push)
 
