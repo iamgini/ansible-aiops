@@ -1,0 +1,10 @@
+{
+  "alert_name": "service_down",
+  "event_type": "service_down",
+  "host": "app-server-02.example.com",
+  "service": "httpd",
+  "state": "down",
+  "severity": "critical",
+  "description": "Apache service is not responding",
+  "timestamp": "2026-06-04T12:05:00Z"
+}

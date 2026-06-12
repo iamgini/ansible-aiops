@@ -1,0 +1,259 @@
+---
+# Intelligent AIOps Workflow - For Unknown Events
+#
+# Flow:
+#   1. Query AAP via MCP to find matching job templates
+#   2. If high-confidence match found → Launch AAP job template
+#   3. If no match → Generate playbook with Maya → Save to Git
+#   4. (Future) Create new AAP job template from generated playbook
+
+- name: Intelligent AIOps Workflow for Unknown Events
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    # Configuration passed from rulebook
+    # event_type, event_description, event_host, event_severity
+    # mcp_server_url, mcp_bearer_token
+    # maya_api_url, git_remote_url, git_token
+
+    # Thresholds
+    mcp_confidence_threshold: 100  # Score above this = auto-launch
+    mcp_minimum_score: 50          # Score below this = skip to Maya
+
+  tasks:
+    # =========================================================================
+    # STEP 1: Query AAP via MCP for Matching Job Templates
+    # =========================================================================
+    - name: Display event context
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "Unknown Event - Starting AI Workflow"
+          - "=========================================="
+          - "Event Type: {{ event_type }}"
+          - "Description: {{ event_description }}"
+          - "Host: {{ event_host }}"
+          - "Severity: {{ event_severity }}"
+          - "Service: {{ event_service | default('N/A') }}"
+          - "Tags: {{ event_tags | default([]) | join(', ') }}"
+          - "=========================================="
+
+    - name: Query AAP MCP server for matching job templates
+      ansible.builtin.uri:
+        url: "{{ mcp_server_url }}/tools/list_job_templates"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ mcp_bearer_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          params:
+            event_type: "{{ event_type }}"
+            service: "{{ event_service }}"
+            hostname: "{{ event_host }}"
+            severity: "{{ event_severity }}"
+            tags: "{{ event_tags }}"
+        return_content: true
+        status_code: [200, 404]
+        timeout: 30
+      register: mcp_response
+      when: mcp_server_url | length > 0
+      failed_when: false
+
+    - name: Parse MCP results and find best match
+      ansible.builtin.set_fact:
+        best_match: "{{ mcp_response.json.content[0].templates | sort(attribute='score', reverse=true) | first }}"
+      when:
+        - mcp_response is defined
+        - mcp_response.status == 200
+        - mcp_response.json.content[0].templates | length > 0
+
+    - name: Display MCP matching results
+      ansible.builtin.debug:
+        msg:
+          - "MCP Search Results:"
+          - "Best Match: {{ best_match.name | default('None') }}"
+          - "Score: {{ best_match.score | default(0) }}"
+          - "Decision: {{ 'Launch AAP' if (best_match.score | default(0) >= mcp_confidence_threshold) else ('Try Maya' if (best_match.score | default(0) < mcp_minimum_score) else 'Manual Review Needed') }}"
+      when: best_match is defined
+
+    # =========================================================================
+    # STEP 2a: If High Confidence Match → Launch AAP Job Template
+    # =========================================================================
+    - name: Launch AAP job template (high confidence match)
+      awx.awx.job_launch:
+        controller_host: "{{ lookup('env', 'CONTROLLER_HOST') }}"
+        controller_username: "{{ lookup('env', 'CONTROLLER_USERNAME') }}"
+        controller_password: "{{ lookup('env', 'CONTROLLER_PASSWORD') }}"
+        validate_certs: false
+        job_template: "{{ best_match.name }}"
+        limit: "{{ event_host }}"
+        extra_vars:
+          event_type: "{{ event_type }}"
+          event_severity: "{{ event_severity }}"
+        wait: false
+      register: aap_job
+      when:
+        - best_match is defined
+        - best_match.score >= mcp_confidence_threshold
+
+    - name: Display AAP job launch result
+      ansible.builtin.debug:
+        msg:
+          - "✅ AAP Job Launched via MCP Match!"
+          - "Template: {{ best_match.name }}"
+          - "Score: {{ best_match.score }}"
+          - "Job ID: {{ aap_job.id }}"
+      when:
+        - best_match is defined
+        - best_match.score >= mcp_confidence_threshold
+        - aap_job is defined
+
+    # =========================================================================
+    # STEP 2b: If No Match or Low Score → Generate with Maya
+    # =========================================================================
+    - name: Generate unique run ID for temp directory
+      ansible.builtin.set_fact:
+        run_id: "{{ lookup('pipe', 'date +%Y%m%d-%H%M%S') }}"
+      when: >
+        best_match is not defined or
+        best_match.score < mcp_minimum_score
+
+    - name: Set temp clone directory path
+      ansible.builtin.set_fact:
+        temp_clone_dir: "/tmp/ansible-maya-git-{{ run_id }}"
+      when: >
+        best_match is not defined or
+        best_match.score < mcp_minimum_score
+
+    - name: Call Ansible Maya API to generate playbook
+      ansible.builtin.uri:
+        url: "{{ maya_api_url }}"
+        method: POST
+        body_format: json
+        body:
+          event_type: "{{ event_type }}"
+          description: "{{ event_description }}"
+          host: "{{ event_host }}"
+          severity: "{{ event_severity }}"
+        return_content: true
+        status_code: 200
+        timeout: 120
+      register: maya_response
+      when: >
+        best_match is not defined or
+        best_match.score < mcp_minimum_score
+
+    - name: Display Maya generation results
+      ansible.builtin.debug:
+        msg:
+          - "Maya Playbook Generation:"
+          - "Event ID: {{ maya_response.json.event_id }}"
+          - "Confidence: {{ maya_response.json.confidence_score * 100 }}%"
+          - "Model: {{ maya_response.json.generation_metadata.model }}"
+          - "Validation: {{ 'Passed' if maya_response.json.validation_passed else 'Failed' }}"
+      when: maya_response is defined
+
+    # =========================================================================
+    # STEP 3: Save Generated Playbook to Git
+    # =========================================================================
+    - name: Generate playbook filename
+      ansible.builtin.set_fact:
+        playbook_filename: "{{ event_type }}_{{ event_host | regex_replace('\\.', '_') }}.yml"
+      when: maya_response is defined
+
+    - name: Clone git repository to temp directory
+      ansible.builtin.git:
+        repo: "https://{{ lookup('env', 'GIT_USERNAME') }}:{{ git_token }}@{{ git_remote_url | regex_replace('https://', '') }}"
+        dest: "{{ temp_clone_dir }}"
+        version: main
+        force: true
+      when:
+        - maya_response is defined
+        - git_token | length > 0
+      no_log: true
+
+    - name: Create playbooks directory in cloned repo
+      ansible.builtin.file:
+        path: "{{ temp_clone_dir }}/playbooks"
+        state: directory
+        mode: '0755'
+      when:
+        - maya_response is defined
+        - git_token | length > 0
+
+    - name: Save generated playbook to cloned repo
+      ansible.builtin.copy:
+        content: "{{ maya_response.json.playbook }}"
+        dest: "{{ temp_clone_dir }}/playbooks/{{ playbook_filename }}"
+        mode: '0644'
+      when:
+        - maya_response is defined
+        - git_token | length > 0
+
+    - name: Configure git user
+      ansible.builtin.command:
+        cmd: "git config user.name '{{ lookup('env', 'GIT_USERNAME') }}'"
+        chdir: "{{ temp_clone_dir }}"
+      changed_when: false
+      when:
+        - maya_response is defined
+        - git_token | length > 0
+
+    - name: Configure git email
+      ansible.builtin.command:
+        cmd: "git config user.email '{{ lookup('env', 'GIT_EMAIL') }}'"
+        chdir: "{{ temp_clone_dir }}"
+      changed_when: false
+      when:
+        - maya_response is defined
+        - git_token | length > 0
+
+    - name: Add and commit playbook
+      ansible.builtin.command:
+        cmd: >
+          git add playbooks/{{ playbook_filename }} &&
+          git commit -m "AI-generated playbook: {{ playbook_filename }}"
+          -m "Event: {{ event_type }}"
+          -m "Confidence: {{ maya_response.json.confidence_score * 100 }}%"
+          -m "Generated by Ansible Maya via EDA"
+        chdir: "{{ temp_clone_dir }}"
+      register: git_commit
+      changed_when: true
+      when:
+        - maya_response is defined
+        - git_token | length > 0
+
+    - name: Push to git repository
+      ansible.builtin.command:
+        cmd: "git push origin main"
+        chdir: "{{ temp_clone_dir }}"
+      when:
+        - maya_response is defined
+        - git_token | length > 0
+        - git_commit.changed
+      register: git_push
+
+    - name: Clean up temp directory
+      ansible.builtin.file:
+        path: "{{ temp_clone_dir }}"
+        state: absent
+      when:
+        - maya_response is defined
+        - git_token | length > 0
+
+    # =========================================================================
+    # STEP 4: Summary
+    # =========================================================================
+    - name: Workflow Summary
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "✅ Intelligent AIOps Workflow Complete!"
+          - "=========================================="
+          - "Workflow Path: {{ 'MCP → AAP Launch' if (best_match is defined and best_match.score >= mcp_confidence_threshold) else 'Maya → Git Push' }}"
+          - "{{ 'AAP Job: ' + (best_match.name | default('N/A')) if (best_match is defined and best_match.score >= mcp_confidence_threshold) else 'Generated Playbook: ' + (playbook_filename | default('N/A')) }}"
+          - "{{ 'MCP Score: ' + (best_match.score | string) if (best_match is defined and best_match.score >= mcp_confidence_threshold) else 'Maya Confidence: ' + ((maya_response.json.confidence_score * 100) | string) + '%' }}"
+          - "{{ 'Job ID: ' + (aap_job.id | string) if (aap_job is defined) else 'Git: ' + (git_remote_url | default('Local only')) }}"
+          - "=========================================="

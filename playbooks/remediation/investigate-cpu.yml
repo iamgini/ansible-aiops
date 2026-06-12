@@ -1,0 +1,214 @@
+---
+# Case 3: Investigate High CPU
+# AAP Job Template: "Investigate High CPU"
+# Triggered by: high_cpu events
+
+- name: Investigate and Remediate High CPU Usage
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    # Variables from EDA event (via AAP job template extra_vars)
+    event_type: "{{ event_type | default('high_cpu') }}"
+    event_severity: "{{ event_severity | default('warning') }}"
+    cpu_threshold: "{{ cpu_threshold | default(80) }}"
+    duration_minutes: "{{ duration_minutes | default(10) }}"
+
+    # Investigation parameters
+    top_processes_count: 20
+    kill_threshold_cpu: 95  # Only auto-kill if process uses >95% CPU
+
+  tasks:
+    - name: Display event context
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "High CPU Investigation"
+          - "=========================================="
+          - "Event Type: {{ event_type }}"
+          - "Host: {{ inventory_hostname }}"
+          - "Severity: {{ event_severity }}"
+          - "CPU Threshold: {{ cpu_threshold }}%"
+          - "Duration: {{ duration_minutes }} minutes"
+          - "=========================================="
+
+    - name: Get current CPU usage
+      ansible.builtin.shell: top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1
+      register: current_cpu
+      changed_when: false
+
+    - name: Display current CPU usage
+      ansible.builtin.debug:
+        msg: "Current CPU usage: {{ current_cpu.stdout }}%"
+
+    - name: Get system load average
+      ansible.builtin.shell: uptime | awk -F'load average:' '{print $2}'
+      register: load_average
+      changed_when: false
+
+    - name: Get top CPU consuming processes
+      ansible.builtin.shell: ps aux --sort=-%cpu | head -{{ top_processes_count + 1 }}
+      register: top_processes
+      changed_when: false
+
+    - name: Display top CPU processes
+      ansible.builtin.debug:
+        msg: "{{ top_processes.stdout_lines }}"
+
+    - name: Identify runaway processes (>95% CPU)
+      ansible.builtin.shell: |
+        ps aux --sort=-%cpu | awk '$3 > 95 {print $2":"$3":"$11}' | head -5
+      register: runaway_processes
+      changed_when: false
+
+    - name: Check for zombie processes
+      ansible.builtin.shell: ps aux | awk '$8 ~ /Z/ {print}'
+      register: zombie_processes
+      changed_when: false
+      failed_when: false
+
+    - name: Display zombie processes
+      ansible.builtin.debug:
+        msg: "{{ zombie_processes.stdout_lines }}"
+      when: zombie_processes.stdout_lines | length > 0
+
+    - name: Check for I/O wait
+      ansible.builtin.shell: iostat -c 1 2 | tail -1 | awk '{print $4}'
+      register: iowait
+      changed_when: false
+      failed_when: false
+
+    - name: Get memory usage
+      ansible.builtin.shell: free -m | grep Mem | awk '{print "Total:"$2"MB Used:"$3"MB Free:"$4"MB"}'
+      register: memory_usage
+      changed_when: false
+
+    - name: Check for specific high CPU services
+      ansible.builtin.shell: |
+        systemctl list-units --type=service --state=running | \
+        while read -r line; do
+          service=$(echo "$line" | awk '{print $1}')
+          if systemctl show "$service" --property=CPUUsageNSec &>/dev/null; then
+            echo "$service"
+          fi
+        done | head -10
+      register: high_cpu_services
+      changed_when: false
+      failed_when: false
+
+    - name: Auto-remediation for known issues
+      block:
+        - name: Restart hung services (if identified)
+          ansible.builtin.systemd:
+            name: "{{ item }}"
+            state: restarted
+          loop: "{{ high_cpu_services.stdout_lines | default([]) }}"
+          when:
+            - high_cpu_services.stdout_lines | length > 0
+            - event_severity == "critical"
+          failed_when: false
+
+        - name: Kill runaway processes (CPU > 95%)
+          ansible.builtin.shell: |
+            for proc in {{ runaway_processes.stdout_lines | join(' ') }}; do
+              pid=$(echo $proc | cut -d':' -f1)
+              cpu=$(echo $proc | cut -d':' -f2)
+              cmd=$(echo $proc | cut -d':' -f3)
+              echo "Killing PID $pid ($cmd) using ${cpu}% CPU"
+              kill -15 $pid || true
+            done
+          when:
+            - runaway_processes.stdout_lines | length > 0
+            - event_severity == "critical"
+          register: kill_result
+          changed_when: kill_result.rc == 0
+          failed_when: false
+
+        - name: Clean up zombie processes
+          ansible.builtin.shell: |
+            for pid in $(ps aux | awk '$8 ~ /Z/ {print $2}'); do
+              parent=$(ps -o ppid= -p $pid)
+              echo "Killing parent $parent of zombie $pid"
+              kill -15 $parent || true
+            done
+          when: zombie_processes.stdout_lines | length > 0
+          register: zombie_cleanup
+          changed_when: zombie_cleanup.rc == 0
+          failed_when: false
+
+      rescue:
+        - name: Auto-remediation failed
+          ansible.builtin.debug:
+            msg: "Auto-remediation encountered errors. Manual investigation required."
+
+    - name: Wait for CPU to stabilize
+      ansible.builtin.pause:
+        seconds: 30
+
+    - name: Check final CPU usage
+      ansible.builtin.shell: top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1
+      register: final_cpu
+      changed_when: false
+
+    - name: Calculate CPU improvement
+      ansible.builtin.set_fact:
+        cpu_improved: "{{ (current_cpu.stdout | float) - (final_cpu.stdout | float) }}"
+
+    - name: Investigation summary
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "High CPU Investigation Complete"
+          - "=========================================="
+          - "Initial CPU: {{ current_cpu.stdout }}%"
+          - "Final CPU: {{ final_cpu.stdout }}%"
+          - "Improvement: {{ cpu_improved }}%"
+          - "Load Average: {{ load_average.stdout }}"
+          - "Memory: {{ memory_usage.stdout }}"
+          - "I/O Wait: {{ iowait.stdout | default('N/A') }}%"
+          - "Runaway Processes Killed: {{ runaway_processes.stdout_lines | length }}"
+          - "Status: {{ 'SUCCESS' if (cpu_improved | float > 10) else 'MANUAL REVIEW NEEDED' }}"
+          - "=========================================="
+
+    - name: Create investigation report
+      ansible.builtin.copy:
+        content: |
+          High CPU Investigation Report
+          ========================================
+          Host: {{ inventory_hostname }}
+          Timestamp: {{ ansible_date_time.iso8601 }}
+          Event Severity: {{ event_severity }}
+
+          CPU Metrics:
+          - Initial CPU: {{ current_cpu.stdout }}%
+          - Final CPU: {{ final_cpu.stdout }}%
+          - Improvement: {{ cpu_improved }}%
+          - Load Average: {{ load_average.stdout }}
+
+          Top CPU Processes:
+          {{ top_processes.stdout }}
+
+          Runaway Processes (>95% CPU):
+          {{ runaway_processes.stdout }}
+
+          Zombie Processes:
+          {{ zombie_processes.stdout }}
+
+          Memory Usage:
+          {{ memory_usage.stdout }}
+
+          Actions Taken:
+          - Runaway processes killed: {{ runaway_processes.stdout_lines | length }}
+          - Services restarted: {{ high_cpu_services.stdout_lines | length }}
+          - Zombies cleaned: {{ zombie_processes.stdout_lines | length }}
+
+          Recommendation:
+          {{ 'CPU usage improved. Monitor for recurrence.' if (cpu_improved | float > 10) else 'Manual investigation required. CPU remains high.' }}
+        dest: /tmp/cpu_investigation_{{ ansible_date_time.epoch }}.txt
+        mode: '0644'
+
+    - name: Alert if CPU still high
+      ansible.builtin.debug:
+        msg: "WARNING: CPU usage still at {{ final_cpu.stdout }}%. Manual investigation required!"
+      when: final_cpu.stdout | float >= cpu_threshold | float

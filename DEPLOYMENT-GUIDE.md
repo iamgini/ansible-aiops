@@ -1,0 +1,421 @@
+# Deployment Guide - AAP-Based Intelligent Remediation
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Event Sources                                 │
+│              (Prometheus, Grafana, Custom)                       │
+└────────────────────────┬────────────────────────────────────────┘
+                         │ Webhook
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              AAP - Event-Driven Ansible (EDA)                    │
+│                                                                  │
+│  Rulebook: intelligent-remediation.yml                          │
+│  Webhook Listener: Port 5000                                    │
+└────────────┬────────────────────────────────────────────────────┘
+             │
+    ┌────────┴──────────────────┬───────────────────┬────────────┐
+    │                           │                   │            │
+    ▼                           ▼                   ▼            ▼
+┌────────┐              ┌────────────┐      ┌──────────┐  ┌──────────┐
+│ Case 1 │              │  Case 2    │      │  Case 3  │  │  Case 4  │
+│ Disk   │              │  Service   │      │  CPU     │  │  Cert    │
+│ Full   │              │  Down      │      │  High    │  │  Expiry  │
+└───┬────┘              └─────┬──────┘      └─────┬────┘  └─────┬────┘
+    │                         │                   │             │
+    ▼                         ▼                   ▼             ▼
+┌────────────────────────────────────────────────────────────────┐
+│                AAP Job Templates (1-4)                         │
+│  Runs remediation playbooks on target hosts                   │
+└────────────────────────────────────────────────────────────────┘
+                                                                  │
+                                                           ┌──────▼──────┐
+                                                           │   Case 5    │
+                                                           │   Unknown   │
+                                                           │   Event     │
+                                                           └──────┬──────┘
+                                                                  │
+                                                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│         AAP Job Template 5: AI Intelligence Workflow                     │
+│                                                                          │
+│  1. Query AAP MCP → Find matching templates                            │
+│     ├─ Score ≥100? → Launch AAP job template ✅                        │
+│     └─ Score <50?  → Continue to step 2                                │
+│                                                                          │
+│  2. Call Ansible Maya API → Generate playbook                          │
+│  3. Push to Git → ansible-ai-generated-playbooks                       │
+│  4. (Future) Create new AAP job template from generated playbook       │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+## Deployment Components
+
+### 1. AAP Components (Core)
+
+| Component | Purpose | Status |
+|-----------|---------|--------|
+| **EDA Rulebook Activation** | Routes events to job templates | ✅ Ready |
+| **Job Template 1-4** | Known event remediation | ⏸️ You create |
+| **Job Template 5** | AI intelligence workflow | ✅ Ready |
+| **Project** | Contains playbooks | ⏸️ You create |
+| **Credentials** | AAP, Git, MCP access | ⏸️ You configure |
+
+### 2. External Services
+
+| Service | Purpose | Required For | Status |
+|---------|---------|--------------|--------|
+| **Ansible Maya** | AI playbook generation | Case 5 (unknown events) | ✅ Running |
+| **AAP MCP Server** | Template intelligence | Case 5 (optional) | ⚠️ Optional |
+| **Git Repository** | Store generated playbooks | Case 5 | ✅ Ready |
+
+### 3. No Local Execution Needed
+
+❌ **NOT required:**
+- Local ansible-playbook execution
+- Local ansible-rulebook execution  
+- Local Python environment
+- Local collection installation
+
+✅ **Everything runs in AAP!**
+
+## Deployment Steps
+
+### Phase 1: AAP Setup (Core Infrastructure)
+
+#### Step 1.1: Create Remediation Playbooks
+
+In your git repository:
+
+```bash
+# Create playbooks directory
+mkdir -p playbooks/remediation
+
+# Create 4 remediation playbooks
+# (See AAP-JOB-TEMPLATES-SETUP.md for examples)
+vim playbooks/remediation/disk-cleanup.yml
+vim playbooks/remediation/restart-service.yml
+vim playbooks/remediation/investigate-cpu.yml
+vim playbooks/remediation/renew-certificate.yml
+
+# Commit and push
+git add playbooks/remediation/
+git commit -m "Add remediation playbooks for Cases 1-4"
+git push
+```
+
+#### Step 1.2: Create AAP Project
+
+**AAP UI → Projects → Add:**
+- Name: `Remediation Playbooks`
+- Organization: `Default`
+- SCM Type: `Git`
+- SCM URL: `https://github.com/your-org/remediation-playbooks`
+- SCM Branch/Tag/Commit: `main`
+- Update on Launch: ✅ Enabled
+
+#### Step 1.3: Create AAP Job Templates 1-4
+
+For each template, **AAP UI → Templates → Add → Job Template:**
+
+**Template 1:**
+- Name: `Remediate Disk Space`
+- Job Type: `Run`
+- Inventory: `Production Linux`
+- Project: `Remediation Playbooks`
+- Playbook: `playbooks/remediation/disk-cleanup.yml`
+- Credentials: `Machine Credential`
+- Prompt on Launch: `Limit`, `Extra Variables`
+
+**Template 2:**
+- Name: `Restart Service`
+- (Same structure, different playbook)
+
+**Template 3:**
+- Name: `Investigate High CPU`
+- (Same structure, different playbook)
+
+**Template 4:**
+- Name: `Renew SSL Certificate`
+- (Same structure, different playbook)
+
+#### Step 1.4: Test Job Templates Manually
+
+```bash
+# Test each template via AAP UI or CLI
+awx job_templates launch "Remediate Disk Space" \
+  --limit "test-server-01" \
+  --extra_vars '{"event_severity": "high"}'
+```
+
+### Phase 2: AI Intelligence Setup (Case 5)
+
+#### Step 2.1: Create ansible-aiops Project in AAP
+
+**AAP UI → Projects → Add:**
+- Name: `ansible-aiops`
+- Organization: `Default`
+- SCM Type: `Git`
+- SCM URL: `https://github.com/iamgini/ansible-aiops` (or your fork)
+- SCM Branch: `main`
+- Update on Launch: ✅ Enabled
+
+#### Step 2.2: Create Custom Credential Type
+
+**AAP UI → Credential Types → Add:**
+
+**Name:** `AIOps Integration`
+
+**Input Configuration:**
+```yaml
+fields:
+  - id: mcp_server_url
+    type: string
+    label: AAP MCP Server URL
+    help_text: "e.g., http://localhost:3000/mcp"
+  - id: aap_bearer_token
+    type: string
+    label: AAP Bearer Token
+    secret: true
+  - id: git_token
+    type: string
+    label: GitHub Token
+    secret: true
+  - id: git_username
+    type: string
+    label: Git Username
+  - id: git_email
+    type: string
+    label: Git Email
+```
+
+**Injector Configuration:**
+```yaml
+env:
+  AAP_MCP_SERVER_URL: "{{ mcp_server_url }}"
+  AAP_BEARER_TOKEN: "{{ aap_bearer_token }}"
+  GIT_TOKEN: "{{ git_token }}"
+  GIT_USERNAME: "{{ git_username }}"
+  GIT_EMAIL: "{{ git_email }}"
+```
+
+#### Step 2.3: Create AIOps Credential
+
+**AAP UI → Credentials → Add:**
+- Name: `AIOps Integration`
+- Credential Type: `AIOps Integration` (the one you just created)
+- Fill in values:
+  - MCP Server URL: `http://localhost:3000/mcp` (if using MCP)
+  - AAP Bearer Token: `<your_token>`
+  - Git Token: `ghp_your_github_token`
+  - Git Username: `iamgini`
+  - Git Email: `your_email@example.com`
+
+#### Step 2.4: Create Job Template 5
+
+**AAP UI → Templates → Add → Job Template:**
+- Name: `AI Intelligence - Unknown Event Remediation`
+- Job Type: `Run`
+- Inventory: `localhost` (or create localhost inventory)
+- Project: `ansible-aiops`
+- Playbook: `playbooks/intelligent-aiops-workflow.yml`
+- Credentials:
+  - `Machine Credential` (localhost)
+  - `AIOps Integration` (the custom credential)
+- Execution Environment: Default
+- Variables:
+  ```yaml
+  maya_api_url: "http://<ansible-maya-host>:8000/api/v1/events/generate"
+  git_remote_url: "https://github.com/iamgini/ansible-ai-generated-playbooks"
+  ```
+- Prompt on Launch: `Extra Variables`
+
+#### Step 2.5: Test AI Intelligence Template
+
+```bash
+awx job_templates launch "AI Intelligence - Unknown Event Remediation" \
+  --extra_vars '{
+    "event_type": "database_slow_query",
+    "event_host": "db-server-01",
+    "event_severity": "medium"
+  }'
+```
+
+### Phase 3: EDA Activation
+
+#### Step 3.1: Create ansible-aiops Decision Environment Project
+
+**AAP UI → Projects → Add:**
+- Name: `ansible-aiops-rulebooks`
+- Organization: `Default`
+- SCM Type: `Git`
+- SCM URL: `https://github.com/iamgini/ansible-aiops`
+- SCM Branch: `main`
+- SCM Update: ✅ On Launch
+
+#### Step 3.2: Activate Rulebook
+
+**AAP UI → Automation Decisions → Rulebook Activations → Add:**
+- Name: `Intelligent Remediation`
+- Description: `Routes events to AAP job templates based on type`
+- Project: `ansible-aiops-rulebooks`
+- Rulebook: `rulebooks/intelligent-remediation.yml`
+- Decision Environment: `Default decision environment`
+- Restart Policy: `always`
+- Rulebook Activation Enabled: ✅ Yes
+
+**Service Options:**
+- Enable Webhooks: ✅ Yes
+- Webhook Port: `5000`
+
+**Credentials:**
+- Add AAP credential (for job template launches)
+
+**Click:** `Create rulebook activation`
+
+#### Step 3.3: Verify EDA is Running
+
+```bash
+# Check activation status
+curl https://your-eda-controller:5000/api/eda/status
+
+# Or in AAP UI
+# Automation Decisions → Rulebook Activations → "Intelligent Remediation"
+# Status should be "Running"
+```
+
+### Phase 4: Integration & Testing
+
+#### Step 4.1: Configure Event Sources
+
+Point your monitoring systems to EDA webhook:
+
+**Prometheus Alertmanager:**
+```yaml
+receivers:
+  - name: 'eda-webhook'
+    webhook_configs:
+      - url: 'https://your-eda-controller:5000/webhook'
+```
+
+**Grafana Alert:**
+```
+Webhook URL: https://your-eda-controller:5000/webhook
+```
+
+#### Step 4.2: Test End-to-End Flow
+
+**Test Case 1 (Known Event):**
+```bash
+curl -X POST https://your-eda-controller:5000/webhook \
+  -H "Content-Type: application/json" \
+  -d @test-events/case1-disk-full.json
+```
+
+**Verify:**
+1. EDA receives event (check logs)
+2. Rulebook matches "High Disk Usage"
+3. Launches `Remediate Disk Space` job template
+4. Job runs on target host
+5. Disk cleanup executed
+
+**Test Case 5 (Unknown Event):**
+```bash
+curl -X POST https://your-eda-controller:5000/webhook \
+  -H "Content-Type: application/json" \
+  -d @test-events/case-unknown-event.json
+```
+
+**Verify:**
+1. EDA receives event
+2. No match in Cases 1-4
+3. Launches `AI Intelligence` job template
+4. Job queries MCP (if configured)
+5. Calls Maya API to generate playbook
+6. Pushes playbook to Git
+7. Check Git repository for new playbook
+
+## Monitoring & Operations
+
+### View EDA Logs
+
+**AAP UI:**
+- Automation Decisions → Rulebook Activations → Intelligent Remediation
+- Click "Instances" tab
+- View logs for each event received
+
+### View Job Executions
+
+**AAP UI:**
+- Jobs → All jobs
+- Filter by Template name
+- View execution history, logs, outputs
+
+### Monitor Maya API
+
+```bash
+# Check Maya health
+curl http://<maya-host>:8000/health
+
+# View Maya logs
+podman logs ansible-maya -f
+```
+
+### Git Repository Monitoring
+
+```bash
+# Check for new AI-generated playbooks
+cd ansible-ai-generated-playbooks/
+git pull
+ls -lt playbooks/  # Latest first
+```
+
+## Troubleshooting
+
+### Issue: EDA not receiving events
+
+**Check:**
+```bash
+# Verify EDA is running
+curl https://your-eda-controller:5000/api/eda/status
+
+# Check firewall
+telnet your-eda-controller 5000
+```
+
+### Issue: Job template launch fails
+
+**Check:**
+- AAP credential attached to EDA activation?
+- Job template name matches rulebook exactly?
+- Job template enabled "Prompt on Launch" for variables?
+
+### Issue: Maya API not responding
+
+**Check:**
+```bash
+# Verify Maya container
+podman ps | grep ansible-maya
+
+# Check Maya logs
+podman logs ansible-maya
+
+# Test Maya API
+curl http://<maya-host>:8000/api/v1/events/generate \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"event_type": "test", "description": "test"}'
+```
+
+## Summary
+
+**Deployment Checklist:**
+- ✅ 4 Remediation playbooks created
+- ✅ 4 AAP job templates created (Cases 1-4)
+- ✅ AI Intelligence job template created (Case 5)
+- ✅ EDA rulebook activated
+- ✅ Event sources configured
+- ✅ End-to-end testing completed
+
+**Everything runs in AAP - no local execution needed!** 🎉

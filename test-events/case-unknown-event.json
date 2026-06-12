@@ -1,0 +1,12 @@
+{
+  "event_type": "database_slow_query",
+  "host": "db-cluster-03.example.com",
+  "severity": "medium",
+  "description": "Database queries taking longer than 5 seconds",
+  "service": "postgresql",
+  "metric": "query_time",
+  "value": 8.2,
+  "database": "production_db",
+  "tags": ["database", "performance", "production"],
+  "timestamp": "2026-06-04T12:15:00Z"
+}

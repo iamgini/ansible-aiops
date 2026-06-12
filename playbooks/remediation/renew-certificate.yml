@@ -1,0 +1,213 @@
+---
+# Case 4: Renew SSL Certificate
+# AAP Job Template: "Renew SSL Certificate"
+# Triggered by: certificate_expiry or cert_expiring events
+
+- name: Renew SSL Certificate on Target Hosts
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    # Variables from EDA event (via AAP job template extra_vars)
+    event_type: "{{ event_type | default('certificate_expiry') }}"
+    event_severity: "{{ event_severity | default('high') }}"
+    cert_path: "{{ cert_path | default('/etc/ssl/certs/server.crt') }}"
+    days_until_expiry: "{{ days_until_expiry | default(30) }}"
+
+    # Certificate parameters
+    key_path: "{{ cert_path | replace('.crt', '.key') | replace('.pem', '.key') }}"
+    web_service: "{{ web_service | default('httpd') }}"  # httpd, nginx, apache2
+
+  tasks:
+    - name: Display event context
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "SSL Certificate Renewal"
+          - "=========================================="
+          - "Event Type: {{ event_type }}"
+          - "Host: {{ inventory_hostname }}"
+          - "Severity: {{ event_severity }}"
+          - "Certificate: {{ cert_path }}"
+          - "Days Until Expiry: {{ days_until_expiry }}"
+          - "=========================================="
+
+    - name: Check if certificate exists
+      ansible.builtin.stat:
+        path: "{{ cert_path }}"
+      register: cert_file
+
+    - name: Fail if certificate does not exist
+      ansible.builtin.fail:
+        msg: "Certificate file {{ cert_path }} does not exist"
+      when: not cert_file.stat.exists
+
+    - name: Get certificate information
+      community.crypto.x509_certificate_info:
+        path: "{{ cert_path }}"
+      register: cert_info
+
+    - name: Display certificate details
+      ansible.builtin.debug:
+        msg:
+          - "Subject: {{ cert_info.subject }}"
+          - "Issuer: {{ cert_info.issuer }}"
+          - "Not Before: {{ cert_info.not_before }}"
+          - "Not After: {{ cert_info.not_after }}"
+          - "Serial Number: {{ cert_info.serial_number }}"
+
+    - name: Calculate days until expiry
+      ansible.builtin.set_fact:
+        actual_days_until_expiry: "{{ ((cert_info.not_after | to_datetime('%Y%m%d%H%M%SZ')) - (ansible_date_time.iso8601 | to_datetime('%Y-%m-%dT%H:%M:%SZ'))).days }}"
+
+    - name: Display expiry information
+      ansible.builtin.debug:
+        msg: "Certificate expires in {{ actual_days_until_expiry }} days"
+
+    - name: Determine certificate type (Let's Encrypt vs custom)
+      ansible.builtin.set_fact:
+        is_letsencrypt: "{{ 'letsencrypt' in cert_path or 'Let''s Encrypt' in (cert_info.issuer.organizationName | default('')) }}"
+
+    - name: Renew Let's Encrypt certificate
+      block:
+        - name: Check if certbot is installed
+          ansible.builtin.command: which certbot
+          register: certbot_check
+          changed_when: false
+          failed_when: false
+
+        - name: Install certbot if missing
+          ansible.builtin.package:
+            name: certbot
+            state: present
+          when: certbot_check.rc != 0
+
+        - name: Determine web server plugin
+          ansible.builtin.set_fact:
+            certbot_plugin: "{{ 'apache' if web_service in ['httpd', 'apache2'] else 'nginx' }}"
+
+        - name: Renew certificate with certbot
+          ansible.builtin.command: certbot renew --{{ certbot_plugin }} --non-interactive
+          register: certbot_renew
+          changed_when: "'renewed' in certbot_renew.stdout.lower()"
+
+        - name: Display certbot result
+          ansible.builtin.debug:
+            msg: "{{ certbot_renew.stdout_lines }}"
+
+      when: is_letsencrypt | bool
+
+    - name: Renew custom certificate
+      block:
+        - name: Alert - Manual renewal required
+          ansible.builtin.debug:
+            msg:
+              - "This is a custom certificate that requires manual renewal"
+              - "Steps to renew:"
+              - "1. Generate new CSR (Certificate Signing Request)"
+              - "2. Submit CSR to Certificate Authority"
+              - "3. Install new certificate and key"
+              - "4. Reload web server"
+
+        - name: Create CSR directory
+          ansible.builtin.file:
+            path: /etc/ssl/csr
+            state: directory
+            mode: '0700'
+
+        - name: Generate new CSR (for reference)
+          community.crypto.openssl_csr:
+            path: "/etc/ssl/csr/{{ inventory_hostname }}_{{ ansible_date_time.epoch }}.csr"
+            privatekey_path: "{{ key_path }}"
+            common_name: "{{ inventory_hostname }}"
+            organization_name: "{{ cert_info.subject.organizationName | default('My Organization') }}"
+            country_name: "{{ cert_info.subject.countryName | default('US') }}"
+          register: csr_generated
+
+        - name: Display CSR location
+          ansible.builtin.debug:
+            msg: "CSR generated at: {{ csr_generated.filename }}"
+
+      when: not is_letsencrypt | bool
+
+    - name: Verify certificate was renewed
+      community.crypto.x509_certificate_info:
+        path: "{{ cert_path }}"
+      register: renewed_cert_info
+
+    - name: Check if certificate changed
+      ansible.builtin.set_fact:
+        cert_renewed: "{{ renewed_cert_info.not_after != cert_info.not_after }}"
+
+    - name: Reload web server
+      ansible.builtin.systemd:
+        name: "{{ web_service }}"
+        state: reloaded
+      when: cert_renewed | bool
+      failed_when: false
+
+    - name: Verify web server is running
+      ansible.builtin.service_facts:
+
+    - name: Check web server status
+      ansible.builtin.set_fact:
+        web_server_running: "{{ ansible_facts.services[web_service ~ '.service'].state == 'running' }}"
+
+    - name: Test HTTPS connectivity (if web server running)
+      ansible.builtin.uri:
+        url: "https://{{ inventory_hostname }}"
+        validate_certs: true
+        return_content: false
+        timeout: 10
+      register: https_test
+      failed_when: false
+      when: web_server_running | bool
+
+    - name: Remediation summary
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "SSL Certificate Renewal Complete"
+          - "=========================================="
+          - "Certificate Path: {{ cert_path }}"
+          - "Certificate Type: {{ 'Let''s Encrypt' if is_letsencrypt else 'Custom/CA' }}"
+          - "Renewal Status: {{ 'SUCCESS - Certificate Renewed' if cert_renewed else 'PENDING - Manual Action Required' }}"
+          - "Days Until Expiry: {{ actual_days_until_expiry }}"
+          - "Web Server: {{ web_service }} - {{ 'Running' if web_server_running else 'Stopped' }}"
+          - "HTTPS Test: {{ 'Passed' if (https_test.status | default(0)) == 200 else 'Failed or Not Tested' }}"
+          - "=========================================="
+
+    - name: Create renewal report
+      ansible.builtin.copy:
+        content: |
+          SSL Certificate Renewal Report
+          ========================================
+          Host: {{ inventory_hostname }}
+          Timestamp: {{ ansible_date_time.iso8601 }}
+
+          Certificate Details:
+          - Path: {{ cert_path }}
+          - Type: {{ 'Let''s Encrypt' if is_letsencrypt else 'Custom/CA' }}
+          - Subject: {{ cert_info.subject.commonName | default('N/A') }}
+          - Issuer: {{ cert_info.issuer.organizationName | default('N/A') }}
+          - Expiry Date: {{ renewed_cert_info.not_after }}
+          - Days Until Expiry: {{ actual_days_until_expiry }}
+
+          Renewal Action:
+          {{ 'Automatic renewal completed with certbot' if (is_letsencrypt and cert_renewed) else 'Manual renewal required - CSR generated for reference' }}
+
+          Web Server:
+          - Service: {{ web_service }}
+          - Status: {{ 'Running' if web_server_running else 'Stopped' }}
+          - HTTPS Test: {{ 'Passed' if (https_test.status | default(0)) == 200 else 'Failed' }}
+
+          Next Steps:
+          {{ 'Monitor certificate renewal' if cert_renewed else 'Submit CSR to CA and install new certificate' }}
+        dest: /tmp/cert_renewal_{{ ansible_date_time.epoch }}.txt
+        mode: '0644'
+
+    - name: Alert if renewal failed
+      ansible.builtin.debug:
+        msg: "WARNING: Certificate renewal requires manual intervention!"
+      when: not cert_renewed | bool

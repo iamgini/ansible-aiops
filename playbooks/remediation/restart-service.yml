@@ -1,0 +1,121 @@
+---
+# Case 2: Restart Service
+# AAP Job Template: "Restart Service"
+# Triggered by: service_down events
+
+- name: Restart Failed Service on Target Hosts
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    # Variables from EDA event (via AAP job template extra_vars)
+    event_type: "{{ event_type | default('service_down') }}"
+    event_severity: "{{ event_severity | default('critical') }}"
+    service_name: "{{ service_name | default('httpd') }}"
+
+    # Restart parameters
+    max_restart_attempts: 3
+    restart_delay_seconds: 5
+
+  tasks:
+    - name: Display event context
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "Service Restart Remediation"
+          - "=========================================="
+          - "Event Type: {{ event_type }}"
+          - "Host: {{ inventory_hostname }}"
+          - "Severity: {{ event_severity }}"
+          - "Service: {{ service_name }}"
+          - "=========================================="
+
+    - name: Check if service exists
+      ansible.builtin.systemd:
+        name: "{{ service_name }}"
+      register: service_status
+      failed_when: false
+
+    - name: Fail if service does not exist
+      ansible.builtin.fail:
+        msg: "Service {{ service_name }} does not exist on this system"
+      when: service_status.status is not defined
+
+    - name: Get initial service status
+      ansible.builtin.service_facts:
+
+    - name: Display current service state
+      ansible.builtin.debug:
+        msg: "Service {{ service_name }} state: {{ ansible_facts.services[service_name ~ '.service'].state | default('unknown') }}"
+
+    - name: Check service logs for errors (last 50 lines)
+      ansible.builtin.shell: journalctl -u {{ service_name }} -n 50 --no-pager
+      register: service_logs
+      changed_when: false
+      failed_when: false
+
+    - name: Display recent service logs
+      ansible.builtin.debug:
+        msg: "{{ service_logs.stdout_lines | default([]) }}"
+        verbosity: 1
+
+    - name: Restart service (with retries)
+      ansible.builtin.systemd:
+        name: "{{ service_name }}"
+        state: restarted
+        daemon_reload: true
+      register: restart_result
+      retries: "{{ max_restart_attempts }}"
+      delay: "{{ restart_delay_seconds }}"
+      until: restart_result is succeeded
+
+    - name: Wait for service to stabilize
+      ansible.builtin.pause:
+        seconds: 10
+
+    - name: Verify service is running
+      ansible.builtin.service_facts:
+
+    - name: Check final service state
+      ansible.builtin.set_fact:
+        service_state: "{{ ansible_facts.services[service_name ~ '.service'].state }}"
+        service_status_result: "{{ ansible_facts.services[service_name ~ '.service'].status | default('unknown') }}"
+
+    - name: Verify service is active
+      ansible.builtin.assert:
+        that:
+          - service_state == 'running'
+        fail_msg: "Service {{ service_name }} failed to start after {{ max_restart_attempts }} attempts"
+        success_msg: "Service {{ service_name }} is now running"
+
+    - name: Check service enabled status
+      ansible.builtin.systemd:
+        name: "{{ service_name }}"
+        enabled: true
+      when: service_state == 'running'
+
+    - name: Get post-restart logs (last 20 lines)
+      ansible.builtin.shell: journalctl -u {{ service_name }} -n 20 --no-pager
+      register: post_restart_logs
+      changed_when: false
+      failed_when: false
+
+    - name: Remediation summary
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "Service Restart Complete"
+          - "=========================================="
+          - "Service: {{ service_name }}"
+          - "Final State: {{ service_state }}"
+          - "Status: {{ 'SUCCESS - Service Running' if service_state == 'running' else 'FAILED' }}"
+          - "Restart Attempts: {{ restart_result.attempts | default(1) }}"
+          - "=========================================="
+          - "Recent logs:"
+          - "{{ post_restart_logs.stdout_lines | default([]) }}"
+
+    - name: Send alert if service still down
+      ansible.builtin.debug:
+        msg: "CRITICAL: Service {{ service_name }} could not be restarted. Manual intervention required!"
+      when: service_state != 'running'

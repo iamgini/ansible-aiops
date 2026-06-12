@@ -1,0 +1,11 @@
+{
+  "alert_name": "disk_usage_high",
+  "event_type": "disk_full",
+  "host": "web-server-01.example.com",
+  "severity": "high",
+  "description": "Disk usage at 95% on /var partition",
+  "metric": "disk_usage",
+  "value": 95,
+  "partition": "/var",
+  "timestamp": "2026-06-04T12:00:00Z"
+}

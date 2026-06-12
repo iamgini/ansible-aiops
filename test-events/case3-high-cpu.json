@@ -1,0 +1,11 @@
+{
+  "alert_name": "high_cpu",
+  "event_type": "high_cpu",
+  "host": "db-server-01.example.com",
+  "metric": "cpu",
+  "value": 92.5,
+  "severity": "warning",
+  "description": "CPU usage sustained above 90% for 10 minutes",
+  "duration_minutes": 10,
+  "timestamp": "2026-06-04T12:10:00Z"
+}

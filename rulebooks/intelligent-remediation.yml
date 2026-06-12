@@ -1,0 +1,120 @@
+---
+# Intelligent Event-Driven Remediation Rulebook
+#
+# Flow:
+#   Known Events (Case 1-4) → Launch specific AAP Job Template
+#   Unknown Events (Default) → Launch AI Intelligence Job Template
+#
+# All execution happens in AAP - this rulebook just routes events
+
+- name: Intelligent Remediation with Fallback to AI Generation
+  hosts: all
+  sources:
+    - name: webhook
+      ansible.eda.webhook:
+        host: 0.0.0.0
+        port: 5000
+
+  rules:
+    # =========================================================================
+    # CASE 1: High Disk Usage - Known Remediation
+    # =========================================================================
+    - name: High Disk Usage - Launch AAP Job Template
+      condition: >
+        event.payload.alert_name == "disk_usage_high" or
+        event.payload.event_type == "disk_full"
+      action:
+        run_job_template:
+          name: "Remediate Disk Space"
+          organization: "Default"
+          job_args:
+            limit: "{{ event.payload.host | default(event.payload.instance) }}"
+            extra_vars:
+              event_type: "{{ event.payload.event_type | default('disk_full') }}"
+              event_host: "{{ event.payload.host | default(event.payload.instance) }}"
+              event_severity: "{{ event.payload.severity | default('high') }}"
+              partition: "{{ event.payload.partition | default('/var') }}"
+              usage_percent: "{{ event.payload.value | default(95) }}"
+
+    # =========================================================================
+    # CASE 2: Service Down - Known Remediation
+    # =========================================================================
+    - name: Service Down - Launch AAP Job Template
+      condition: >
+        event.payload.alert_name == "service_down" or
+        event.payload.state == "down"
+      action:
+        run_job_template:
+          name: "Restart Service"
+          organization: "Default"
+          job_args:
+            limit: "{{ event.payload.host | default(event.payload.instance) }}"
+            extra_vars:
+              event_type: "service_down"
+              event_host: "{{ event.payload.host | default(event.payload.instance) }}"
+              event_severity: "{{ event.payload.severity | default('critical') }}"
+              service_name: "{{ event.payload.service | default('httpd') }}"
+
+    # =========================================================================
+    # CASE 3: High CPU Usage - Known Remediation
+    # =========================================================================
+    - name: High CPU Usage - Launch AAP Job Template
+      condition: >
+        event.payload.alert_name == "high_cpu" or
+        (event.payload.metric == "cpu" and event.payload.value | float > 80)
+      action:
+        run_job_template:
+          name: "Investigate High CPU"
+          organization: "Default"
+          job_args:
+            limit: "{{ event.payload.host | default(event.payload.instance) }}"
+            extra_vars:
+              event_type: "high_cpu"
+              event_host: "{{ event.payload.host | default(event.payload.instance) }}"
+              event_severity: "{{ event.payload.severity | default('warning') }}"
+              cpu_threshold: "{{ event.payload.value | default(80) }}"
+              duration_minutes: "{{ event.payload.duration_minutes | default(10) }}"
+
+    # =========================================================================
+    # CASE 4: Certificate Expiry - Known Remediation
+    # =========================================================================
+    - name: Certificate Expiry Warning - Launch AAP Job Template
+      condition: >
+        event.payload.alert_name == "certificate_expiry" or
+        event.payload.event_type == "cert_expiring"
+      action:
+        run_job_template:
+          name: "Renew SSL Certificate"
+          organization: "Default"
+          job_args:
+            limit: "{{ event.payload.host | default(event.payload.instance) }}"
+            extra_vars:
+              event_type: "certificate_expiry"
+              event_host: "{{ event.payload.host | default(event.payload.instance) }}"
+              event_severity: "{{ event.payload.severity | default('high') }}"
+              cert_path: "{{ event.payload.cert_path | default('/etc/ssl/certs/server.crt') }}"
+              days_until_expiry: "{{ event.payload.days_until_expiry | default(30) }}"
+
+    # =========================================================================
+    # CASE 5: Unknown Event - AI Intelligence Workflow
+    # =========================================================================
+    # This catches ALL events that don't match above rules
+    # Launches AAP job template that runs:
+    #   MCP Search → Maya Generation → Git Push → (Future: Create Job Template)
+    # =========================================================================
+    - name: Unknown Event - Launch AI Intelligence Job Template
+      condition: event.payload is defined
+      action:
+        run_job_template:
+          name: "AI Intelligence - Unknown Event Remediation"
+          organization: "Default"
+          job_args:
+            extra_vars:
+              event_type: "{{ event.payload.event_type | default('unknown') }}"
+              event_description: "{{ event.payload.description | default(event.payload.message | default('Unknown event')) }}"
+              event_host: "{{ event.payload.host | default(event.payload.instance | default('localhost')) }}"
+              event_severity: "{{ event.payload.severity | default('medium') }}"
+              event_service: "{{ event.payload.service | default('') }}"
+              event_tags: "{{ event.payload.tags | default([]) }}"
+              event_metric: "{{ event.payload.metric | default('') }}"
+              event_value: "{{ event.payload.value | default('') }}"

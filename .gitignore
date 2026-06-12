@@ -1,5 +1,19 @@
 # Environment variables (contains secrets)
 .env
+.env.*
+!.env.example
+
+# Credentials and secrets
+*_token
+*_password
+*_secret
+*.pem
+*.key
+*.crt
+credentials.yml
+secrets.yml
+vault.yml
+vault-password.txt
 
 # Python
 __pycache__/
@@ -10,11 +24,16 @@ __pycache__/
 venv/
 env/
 ENV/
+build/
+dist/
+*.egg-info/
 
 # Ansible
 *.retry
 .ansible/
 *.log
+collections/ansible_collections/  # Downloaded collections
+roles/  # Downloaded roles (if using requirements.yml)
 
 # IDE
 .vscode/
@@ -22,10 +41,15 @@ ENV/
 *.swp
 *.swo
 *~
+.project
+.settings/
+.classpath
 
 # OS
 .DS_Store
 Thumbs.db
+.Spotlight-V100
+.Trashes
 
 # Generated playbooks (optional - remove if you want to track them)
 # generated-playbooks/playbooks/*.yml
@@ -33,3 +57,16 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.bak
+*.orig
+*~
+
+# Test output
+test-results/
+junit/
+coverage/
+
+# Archived old files (root level only)
+/archive/
+
+# Claude Code
+.claude/

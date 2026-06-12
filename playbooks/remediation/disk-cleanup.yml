@@ -1,0 +1,170 @@
+---
+# Case 1: Remediate Disk Space
+# AAP Job Template: "Remediate Disk Space"
+# Triggered by: disk_usage_high or disk_full events
+
+- name: Remediate Disk Space on Target Hosts
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    # Variables from EDA event (via AAP job template extra_vars)
+    event_type: "{{ event_type | default('disk_full') }}"
+    event_severity: "{{ event_severity | default('high') }}"
+    partition: "{{ partition | default('/var') }}"
+    usage_percent: "{{ usage_percent | default(95) }}"
+
+    # Cleanup thresholds
+    log_retention_days: 30
+    temp_file_age_days: 7
+    package_cache_max_age_days: 90
+
+  tasks:
+    - name: Display event context
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "Disk Space Remediation"
+          - "=========================================="
+          - "Event Type: {{ event_type }}"
+          - "Host: {{ inventory_hostname }}"
+          - "Severity: {{ event_severity }}"
+          - "Partition: {{ partition }}"
+          - "Usage: {{ usage_percent }}%"
+          - "=========================================="
+
+    - name: Check current disk usage
+      ansible.builtin.shell: df {{ partition }} | tail -1 | awk '{print $5}' | sed 's/%//'
+      register: initial_usage
+      changed_when: false
+      failed_when: initial_usage.rc != 0
+
+    - name: Identify large directories
+      ansible.builtin.shell: |
+        du -sh {{ partition }}/* 2>/dev/null | sort -rh | head -10
+      register: large_dirs
+      changed_when: false
+      failed_when: false
+
+    - name: Display large directories
+      ansible.builtin.debug:
+        msg: "{{ large_dirs.stdout_lines }}"
+
+    - name: Perform safe disk cleanup
+      block:
+        - name: Clean package manager cache (DNF/YUM)
+          ansible.builtin.shell: |
+            if command -v dnf &> /dev/null; then
+              dnf clean all
+            elif command -v yum &> /dev/null; then
+              yum clean all
+            fi
+          register: pkg_cleanup
+          changed_when: pkg_cleanup.rc == 0
+          failed_when: false
+
+        - name: Clean package manager cache (APT)
+          ansible.builtin.apt:
+            autoclean: true
+            autoremove: true
+          when: ansible_pkg_mgr == "apt"
+          failed_when: false
+
+        - name: Remove old log files
+          ansible.builtin.find:
+            paths:
+              - /var/log
+            patterns: "*.log"
+            age: "{{ log_retention_days }}d"
+            recurse: true
+          register: old_logs
+
+        - name: Delete old log files
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            state: absent
+          loop: "{{ old_logs.files }}"
+          when: old_logs.files | length > 0
+          failed_when: false
+
+        - name: Truncate large log files (> 100MB)
+          ansible.builtin.shell: |
+            find /var/log -type f -size +100M -exec truncate -s 0 {} \;
+          register: truncate_logs
+          changed_when: truncate_logs.rc == 0
+          failed_when: false
+
+        - name: Clean systemd journal logs
+          ansible.builtin.command: journalctl --vacuum-size=500M
+          register: journal_cleanup
+          changed_when: journal_cleanup.rc == 0
+          failed_when: false
+
+        - name: Remove old temporary files
+          ansible.builtin.find:
+            paths:
+              - /tmp
+              - /var/tmp
+            age: "{{ temp_file_age_days }}d"
+            file_type: any
+          register: temp_files
+
+        - name: Delete old temporary files
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            state: absent
+          loop: "{{ temp_files.files }}"
+          when: temp_files.files | length > 0
+          failed_when: false
+
+        - name: Remove old core dumps
+          ansible.builtin.find:
+            paths:
+              - /var/crash
+              - /var/core
+            patterns: "core.*"
+            age: 7d
+          register: core_dumps
+
+        - name: Delete core dumps
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            state: absent
+          loop: "{{ core_dumps.files }}"
+          when: core_dumps.files | length > 0
+          failed_when: false
+
+      rescue:
+        - name: Handle cleanup failure
+          ansible.builtin.debug:
+            msg: "Disk cleanup encountered errors but continuing..."
+
+    - name: Check final disk usage
+      ansible.builtin.shell: df {{ partition }} | tail -1 | awk '{print $5}' | sed 's/%//'
+      register: final_usage
+      changed_when: false
+      failed_when: final_usage.rc != 0
+
+    - name: Calculate space freed
+      ansible.builtin.set_fact:
+        space_freed: "{{ (initial_usage.stdout | int) - (final_usage.stdout | int) }}"
+
+    - name: Remediation summary
+      ansible.builtin.debug:
+        msg:
+          - "=========================================="
+          - "Disk Space Remediation Complete"
+          - "=========================================="
+          - "Initial Usage: {{ initial_usage.stdout }}%"
+          - "Final Usage: {{ final_usage.stdout }}%"
+          - "Space Freed: {{ space_freed }}%"
+          - "Status: {{ 'SUCCESS' if (space_freed | int > 0) else 'NO CHANGE' }}"
+          - "=========================================="
+
+    - name: Fail if cleanup was insufficient
+      ansible.builtin.fail:
+        msg: "Disk usage still at {{ final_usage.stdout }}%. Manual intervention required."
+      when:
+        - final_usage.stdout | int >= 90
+        - event_severity == "critical"

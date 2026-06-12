@@ -8,22 +8,33 @@
     maya_api_url: "http://localhost:8000/api/v1/events/generate"
 
     # Event details
-    event_type: "disk_full"
-    event_description: "Disk usage at 95% on /var/log partition"
-    target_host: "web-server-01.example.com"
+    # event_type: "disk_full"
+    # event_description: "Disk usage at 95% on /var/log partition"
+    # target_host: "web-server-01.example.com"
+    # event_severity: "high"
+
+    # Event details #2 sample
+    event_type: "nginx service stopped"
+    event_description: "Nginx service not working"
+    target_host: "web-server-02.example.com"
     event_severity: "high"
 
     # Git configuration
-    git_repo_path: "/home/gmadappa/ansible/ansible-aiops/generated-playbooks"
-    git_remote_url: "https://github.com/iamgini/ansible-ai-generated-playbooks"
-    git_token: "{{ lookup('env', 'GIT_TOKEN') }}"  # Read from environment variable
-    git_username: "iamgini"
-    git_email: "net.gini@gmail.com"
-
-    # Output
-    playbook_output_dir: "{{ git_repo_path }}/playbooks"
+    git_remote_url: "https://github.com/your_username/your-ai-generated-playbooks-repo"
+    git_token: "{{ lookup('env', 'GIT_TOKEN') }}"
+    git_username: "{{ lookup('env', 'GIT_USERNAME') | default('your_github_username', true) }}"
+    git_email: "{{ lookup('env', 'GIT_EMAIL') | default('your_email@example.com', true) }}"
+    git_branch: "main"  # or create dynamic branch: "ai-{{ event_type }}-{{ run_id }}"
 
   tasks:
+    - name: Generate unique run ID for temp directory
+      ansible.builtin.set_fact:
+        run_id: "{{ lookup('pipe', 'date +%Y%m%d-%H%M%S') }}"
+      run_once: true
+
+    - name: Set temp clone directory path
+      ansible.builtin.set_fact:
+        temp_clone_dir: "/tmp/ansible-maya-git-{{ run_id }}"
     - name: Call Ansible Maya API to generate playbook
       ansible.builtin.uri:
         url: "{{ maya_api_url }}"
@@ -48,63 +59,54 @@
           - "Tokens: {{ maya_response.json.generation_metadata.tokens_used }}"
           - "Validation: {{ 'Passed' if maya_response.json.validation_passed else 'Failed' }}"
 
-    - name: Create output directory
-      ansible.builtin.file:
-        path: "{{ playbook_output_dir }}"
-        state: directory
-        mode: '0755'
-
     - name: Generate playbook filename
       ansible.builtin.set_fact:
         playbook_filename: "{{ event_type }}_{{ target_host | regex_replace('\\.', '_') }}.yml"
-        playbook_full_path: "{{ playbook_output_dir }}/{{ event_type }}_{{ target_host | regex_replace('\\.', '_') }}.yml"
 
-    - name: Save generated playbook to file
+    - name: Clone git repository to temp directory
+      ansible.builtin.git:
+        repo: "https://{{ git_username }}:{{ git_token }}@{{ git_remote_url | regex_replace('https://', '') }}"
+        dest: "{{ temp_clone_dir }}"
+        version: "{{ git_branch }}"
+        force: true
+      when: git_token | length > 0
+      no_log: true  # Don't log the token
+
+    - name: Create playbooks directory in cloned repo
+      ansible.builtin.file:
+        path: "{{ temp_clone_dir }}/playbooks"
+        state: directory
+        mode: '0755'
+      when: git_token | length > 0
+
+    - name: Save generated playbook to cloned repo
       ansible.builtin.copy:
         content: "{{ maya_response.json.playbook }}"
-        dest: "{{ playbook_full_path }}"
+        dest: "{{ temp_clone_dir }}/playbooks/{{ playbook_filename }}"
         mode: '0644'
+      when: git_token | length > 0
 
-    - name: Display saved playbook path
-      ansible.builtin.debug:
-        msg: "Playbook saved to: {{ playbook_full_path }}"
-
-    - name: Initialize git repository if needed
-      ansible.builtin.command:
-        cmd: git init
-        chdir: "{{ git_repo_path }}"
-      register: git_init
-      failed_when: false
-      changed_when: "'Initialized' in git_init.stdout or 'Reinitialized' in git_init.stdout"
-
-    - name: Configure git user
+    - name: Configure git user in cloned repo
       ansible.builtin.command:
         cmd: "git config user.name '{{ git_username }}'"
-        chdir: "{{ git_repo_path }}"
+        chdir: "{{ temp_clone_dir }}"
       changed_when: false
+      when: git_token | length > 0
 
-    - name: Configure git email
+    - name: Configure git email in cloned repo
       ansible.builtin.command:
         cmd: "git config user.email '{{ git_email }}'"
-        chdir: "{{ git_repo_path }}"
-      changed_when: false
-
-    - name: Add remote if not exists
-      ansible.builtin.shell: |
-        if ! git remote get-url origin >/dev/null 2>&1; then
-          git remote add origin {{ git_remote_url }}
-        fi
-      args:
-        chdir: "{{ git_repo_path }}"
+        chdir: "{{ temp_clone_dir }}"
       changed_when: false
       when: git_token | length > 0
 
     - name: Add playbook to git
       ansible.builtin.command:
-        cmd: "git add {{ playbook_filename }}"
-        chdir: "{{ playbook_output_dir }}"
+        cmd: "git add playbooks/{{ playbook_filename }}"
+        chdir: "{{ temp_clone_dir }}"
       register: git_add
       changed_when: true
+      when: git_token | length > 0
 
     - name: Commit playbook
       ansible.builtin.command:
@@ -113,48 +115,44 @@
           -m "Event: {{ event_type }}"
           -m "Host: {{ target_host }}"
           -m "Confidence: {{ maya_response.json.confidence_score * 100 }}%"
-          -m "Generated by Ansible Maya with {{ maya_response.json.generation_metadata.model }}"
-        chdir: "{{ git_repo_path }}"
+          -m "Model: {{ maya_response.json.generation_metadata.model }}"
+          -m "Generated by Ansible Maya"
+        chdir: "{{ temp_clone_dir }}"
       register: git_commit
       changed_when: "'nothing to commit' not in git_commit.stdout"
       failed_when:
         - git_commit.rc != 0
         - "'nothing to commit' not in git_commit.stdout"
-
-    - name: Ensure main branch exists
-      ansible.builtin.command:
-        cmd: git branch -M main
-        chdir: "{{ git_repo_path }}"
-      when: git_commit.changed
-      changed_when: false
-
-    - name: Pull remote changes before push
-      ansible.builtin.shell: |
-        git pull https://{{ git_username }}:{{ lookup('env', 'GIT_TOKEN') }}@{{ git_remote_url | regex_replace('https://', '') }} main --rebase --allow-unrelated-histories
-      args:
-        chdir: "{{ git_repo_path }}"
-      when:
-        - git_token | length > 0
-        - git_commit.changed
-      register: git_pull
-      failed_when: false
-      changed_when: false
+      when: git_token | length > 0
 
     - name: Push to Git repository
-      ansible.builtin.shell: |
-        git push https://{{ git_username }}:{{ lookup('env', 'GIT_TOKEN') }}@{{ git_remote_url | regex_replace('https://', '') }} main
-      args:
-        chdir: "{{ git_repo_path }}"
+      ansible.builtin.command:
+        cmd: "git push origin {{ git_branch }}"
+        chdir: "{{ temp_clone_dir }}"
       when:
         - git_token | length > 0
         - git_commit.changed
-      # no_log: true  # Don't log the token
       register: git_push
 
     - name: Display Git push result
       ansible.builtin.debug:
         msg: "✅ Playbook pushed to Git successfully!"
-      when: git_push.changed
+      when:
+        - git_token | length > 0
+        - git_push.changed
+
+    # - name: Save playbook locally as backup
+    #   ansible.builtin.copy:
+    #     content: "{{ maya_response.json.playbook }}"
+    #     dest: "./generated-playbooks/playbooks/{{ playbook_filename }}"
+    #     mode: '0644'
+    #   when: git_token | length == 0
+
+    - name: Clean up temp clone directory
+      ansible.builtin.file:
+        path: "{{ temp_clone_dir }}"
+        state: absent
+      when: git_token | length > 0
 
     - name: Summary
       ansible.builtin.debug:
@@ -163,7 +161,10 @@
           - "✅ Workflow Complete!"
           - "=========================================="
           - "Generated Playbook: {{ playbook_filename }}"
-          - "Location: {{ playbook_full_path }}"
+          - "Event: {{ event_type }}"
+          - "Host: {{ target_host }}"
           - "Confidence: {{ maya_response.json.confidence_score * 100 }}%"
-          - "Git Status: {{ 'Pushed' if git_push.changed else 'Local only (no git push)' }}"
+          - "Model: {{ maya_response.json.generation_metadata.model }}"
+          - "Validation: {{ 'Passed ✓' if maya_response.json.validation_passed else 'Failed ✗' }}"
+          - "Git Status: {{ 'Pushed to ' + git_remote_url if (git_token | length > 0 and git_push.changed) else 'Local only (set GIT_TOKEN to push)' }}"
           - "=========================================="
