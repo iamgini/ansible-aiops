@@ -4,10 +4,17 @@ Intelligent event-driven automation using Ansible EDA, MCP (Model Context Protoc
 
 ## Features
 
-- **AI-Powered Playbook Generation**: Uses Ansible Maya to generate playbooks based on events
+- **AI-Powered Playbook Generation**: Uses [Ansible Maya](https://github.com/iamgini/ansible-maya) to generate playbooks based on events
 - **Intelligent Job Template Matching**: MCP integration to find suitable AAP job templates for events
 - **Event-Driven Automation**: EDA rulebooks for automated responses
 - **Git Integration**: Automatic commit and push of generated playbooks
+
+## Related Projects
+
+This project integrates with:
+- **[Ansible Maya](https://github.com/iamgini/ansible-maya)** - AI-powered Ansible playbook generator (required for Case 5 - Unknown Events)
+- **[AAP MCP Server](https://github.com/ansible/aap-mcp-server)** - Model Context Protocol server for Ansible Automation Platform
+- **[ansible.mcp Collection](https://github.com/ansible-collections/ansible.mcp)** - MCP client collection for Ansible
 
 ## Setup
 
@@ -159,8 +166,8 @@ generated-playbooks/
 ## Requirements
 
 ### Services
-- **Ansible Maya**: AI playbook generation service (http://localhost:8000)
-- **AAP MCP Server**: Model Context Protocol server for AAP (http://localhost:3000/mcp)
+- **[Ansible Maya](https://github.com/iamgini/ansible-maya)**: AI playbook generation service (http://localhost:8000) - Required for unknown event handling
+- **[AAP MCP Server](https://github.com/ansible/aap-mcp-server)**: Model Context Protocol server for AAP (http://localhost:3000/mcp)
 - **Ansible Automation Platform**: Version 2.6.4+ with MCP support
 
 ### Tools
@@ -225,8 +232,17 @@ ansible-playbook playbooks/find-matching-job-template.yml \
 
 ## Documentation
 
+### Internal Documentation
+- **[Quick Start Guide](QUICKSTART.md)** - Get started in 5 minutes
 - **[EDA MCP Integration Guide](docs/EDA-MCP-INTEGRATION.md)** - Comprehensive guide for MCP integration
-- **[Ansible MCP Collection](https://github.com/ansible-collections/ansible.mcp)** - MCP collection documentation
+- **[AAP Job Templates Setup](AAP-JOB-TEMPLATES-SETUP.md)** - Configure AAP job templates
+- **[Deployment Guide](DEPLOYMENT-GUIDE.md)** - Production deployment guide
+- **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design
+- **[Scoring Algorithm](docs/SCORING-ALGORITHM.md)** - Template matching algorithm details
+
+### Related Projects
+- **[Ansible Maya](https://github.com/iamgini/ansible-maya)** - AI-powered playbook generator
+- **[Ansible MCP Collection](https://github.com/ansible-collections/ansible.mcp)** - MCP client for Ansible
 - **[AAP MCP Server](https://github.com/ansible/aap-mcp-server)** - MCP server for AAP
 
 ## Project Structure

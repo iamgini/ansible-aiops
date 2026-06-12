@@ -493,5 +493,55 @@ Monitoring System → EDA Webhook/Kafka/Source → EDA Rulebook
 │    • Kubernetes/OpenShift (Production)                  │
 │    • PostgreSQL (AAP Database)                          │
 │    • Redis (Caching, optional)                          │
+│                                                          │
+│  AI/LLM Layer (Optional - for Unknown Events):         │
+│    • Ansible Maya (AI Playbook Generator)               │
+│      https://github.com/iamgini/ansible-maya            │
+│    • LLM Provider (Claude/OpenAI/Ollama)                │
 └─────────────────────────────────────────────────────────┘
 ```
+
+## Integration with Ansible Maya
+
+For unknown events that don't match any existing job templates, this project can integrate with **[Ansible Maya](https://github.com/iamgini/ansible-maya)** for AI-powered playbook generation.
+
+### Maya Integration Flow
+
+```
+┌──────────────┐
+│ Unknown Event│
+│  (No Match)  │
+└──────┬───────┘
+       │
+       ▼
+┌────────────────────────────────────────┐
+│  intelligent-aiops-workflow.yml        │
+│                                        │
+│  1. Query MCP for Templates            │
+│  2. If Score < Threshold:              │
+│     ├─ Call Ansible Maya API           │
+│     ├─ Generate Playbook (AI)          │
+│     ├─ Validate with ansible-lint      │
+│     └─ Push to Git Repository          │
+└────────────────────────────────────────┘
+       │
+       ▼
+┌────────────────────────────────────────┐
+│  Ansible Maya                          │
+│  (AI Playbook Generator)               │
+│                                        │
+│  • Event Classification                │
+│  • LLM-Based Generation                │
+│  • Validation & Linting                │
+│  • Confidence Scoring                  │
+│  • Best Practices Enforcement          │
+└────────────────────────────────────────┘
+       │
+       ▼
+┌────────────────────────────────────────┐
+│  Generated Playbook                    │
+│  (Committed to Git)                    │
+└────────────────────────────────────────┘
+```
+
+**See:** [Ansible Maya Repository](https://github.com/iamgini/ansible-maya) for installation and configuration.

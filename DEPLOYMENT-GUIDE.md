@@ -1,5 +1,12 @@
 # Deployment Guide - AAP-Based Intelligent Remediation
 
+## Related Projects
+
+This deployment integrates with:
+- **[Ansible Maya](https://github.com/iamgini/ansible-maya)** - AI-powered playbook generator (required for Case 5 - Unknown Events)
+- **[AAP MCP Server](https://github.com/ansible/aap-mcp-server)** - Model Context Protocol server for AAP
+- **[ansible.mcp Collection](https://github.com/ansible-collections/ansible.mcp)** - MCP client for Ansible
+
 ## Architecture Overview
 
 ```
@@ -67,7 +74,7 @@
 
 | Service | Purpose | Required For | Status |
 |---------|---------|--------------|--------|
-| **Ansible Maya** | AI playbook generation | Case 5 (unknown events) | ✅ Running |
+| **[Ansible Maya](https://github.com/iamgini/ansible-maya)** | AI playbook generation | Case 5 (unknown events) | ✅ Running |
 | **AAP MCP Server** | Template intelligence | Case 5 (optional) | ⚠️ Optional |
 | **Git Repository** | Store generated playbooks | Case 5 | ✅ Ready |
 
