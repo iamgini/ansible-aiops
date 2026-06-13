@@ -127,9 +127,34 @@
         best_match is not defined or
         best_match.score < mcp_minimum_score
 
-    - name: Call Ansible Maya API to generate playbook
+    # -------------------------------------------------------------------------
+    # Option 1: Simple Generation (Faster, Single Agent)
+    # -------------------------------------------------------------------------
+    # - name: Call Ansible Maya API to generate playbook (simple)
+    #   ansible.builtin.uri:
+    #     url: "{{ maya_api_url }}"
+    #     method: POST
+    #     body_format: json
+    #     body:
+    #       event_type: "{{ event_type }}"
+    #       description: "{{ event_description }}"
+    #       host: "{{ event_host }}"
+    #       severity: "{{ event_severity }}"
+    #     return_content: true
+    #     status_code: 200
+    #     timeout: 120
+    #   register: maya_response
+    #   when: >
+    #     best_match is not defined or
+    #     best_match.score < mcp_minimum_score
+
+    # -------------------------------------------------------------------------
+    # Option 2: Multi-Agent Review (Higher Quality, Security + Best Practices)
+    # Adds 5-15% confidence boost with adversarial review
+    # -------------------------------------------------------------------------
+    - name: Call Ansible Maya API with multi-agent review
       ansible.builtin.uri:
-        url: "{{ maya_api_url }}"
+        url: "{{ maya_api_url }}?multi_agent_review=true"
         method: POST
         body_format: json
         body:
@@ -139,7 +164,7 @@
           severity: "{{ event_severity }}"
         return_content: true
         status_code: 200
-        timeout: 120
+        timeout: 180  # Increased timeout for multi-agent processing
       register: maya_response
       when: >
         best_match is not defined or
