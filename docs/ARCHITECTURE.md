@@ -495,17 +495,23 @@ Monitoring System → EDA Webhook/Kafka/Source → EDA Rulebook
 │    • Redis (Caching, optional)                          │
 │                                                          │
 │  AI/LLM Layer (Optional - for Unknown Events):         │
-│    • Ansible Maya (AI Playbook Generator)               │
-│      https://github.com/iamgini/ansible-maya            │
+│    • Red Hat Automation Code Assistant (Lightspeed)     │
+│      Built into AAP 2.6+ for AI playbook generation     │
 │    • LLM Provider (Claude/OpenAI/Ollama)                │
 └─────────────────────────────────────────────────────────┘
 ```
 
-## Integration with Ansible Maya
+## Integration with Red Hat Automation Code Assistant
 
-For unknown events that don't match any existing job templates, this project can integrate with **[Ansible Maya](https://github.com/iamgini/ansible-maya)** for AI-powered playbook generation.
+For unknown events that don't match any existing job templates, this project integrates with **Red Hat Automation Code Assistant** (Lightspeed, built into AAP 2.6+) for AI-powered playbook generation.
 
-### Maya Integration Flow
+This follows the **AIOps multi-LLM workflow pattern** where:
+- **Red Hat AI** (optional) analyzes and diagnoses incidents
+- **Code Assistant** generates remediation playbooks
+
+Reference: [Ansible AIOps Solution Guide](https://ansible-tmm.github.io/solution-guides/README-AIOps.html)
+
+### Code Assistant Integration Flow
 
 ```
 ┌──────────────┐
@@ -519,29 +525,34 @@ For unknown events that don't match any existing job templates, this project can
 │                                        │
 │  1. Query MCP for Templates            │
 │  2. If Score < Threshold:              │
-│     ├─ Call Ansible Maya API           │
-│     ├─ Generate Playbook (AI)          │
-│     ├─ Validate with ansible-lint      │
+│     ├─ Build structured prompt         │
+│     ├─ Call Code Assistant API         │
+│     ├─ Validate generated playbook     │
 │     └─ Push to Git Repository          │
 └────────────────────────────────────────┘
        │
        ▼
 ┌────────────────────────────────────────┐
-│  Ansible Maya                          │
-│  (AI Playbook Generator)               │
+│  Red Hat Code Assistant (Lightspeed)   │
+│  (AI Playbook Generator - AAP 2.6+)    │
 │                                        │
-│  • Event Classification                │
+│  • Prompt Analysis                     │
 │  • LLM-Based Generation                │
-│  • Validation & Linting                │
-│  • Confidence Scoring                  │
-│  • Best Practices Enforcement          │
+│  • FQCN Best Practices                 │
+│  • Ansible-Specific Training           │
+│  • Enterprise AI Models                │
 └────────────────────────────────────────┘
        │
        ▼
 ┌────────────────────────────────────────┐
 │  Generated Playbook                    │
-│  (Committed to Git)                    │
+│  (Validated & Committed to Git)        │
 └────────────────────────────────────────┘
 ```
 
-**See:** [Ansible Maya Repository](https://github.com/iamgini/ansible-maya) for installation and configuration.
+**API Endpoint:**
+```yaml
+lightspeed_url: "http://lightspeed-coding-assistant:8000/api/v0/ai/generations/"
+```
+
+**See:** [AAP 2.6 Lightspeed Documentation](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6) for deployment and configuration.

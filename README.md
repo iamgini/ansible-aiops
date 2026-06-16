@@ -2,19 +2,35 @@
 
 Intelligent event-driven automation using Ansible EDA, MCP (Model Context Protocol), and AI-powered playbook generation.
 
+**What is AIOps?** Combines AI, big data, and machine learning to augment/automate manual IT tasks, improving issue detection, root cause analysis, and system resolution. This implementation breaks the traditional "1,000 events = 1,000 rules" model with **"1 rule + AI inference"** handling dynamic scenarios.
+
 ## Features
 
-- **AI-Powered Playbook Generation**: Uses [Ansible Maya](https://github.com/iamgini/ansible-maya) to generate playbooks based on events
+- **AI-Powered Playbook Generation**: Uses Red Hat Automation Code Assistant (AAP 2.6+ Lightspeed) to generate playbooks based on events
 - **Intelligent Job Template Matching**: MCP integration to find suitable AAP job templates for events
-- **Event-Driven Automation**: EDA rulebooks for automated responses
-- **Git Integration**: Automatic commit and push of generated playbooks
+- **Event-Driven Automation**: EDA rulebooks for automated responses with multi-source support (Kafka, webhooks, file logs)
+- **Git Integration**: Automatic commit and push of generated playbooks using `ansible.scm` collection
+- **Multi-LLM Workflow**: Optional Red Hat AI for incident analysis + Code Assistant for remediation generation
+- **Policy Enforcement**: Integration with Ansible Automated Policy as Code for guardrails
 
 ## Related Projects
 
 This project integrates with:
-- **[Ansible Maya](https://github.com/iamgini/ansible-maya)** - AI-powered Ansible playbook generator (required for Case 5 - Unknown Events)
+- **Red Hat Automation Code Assistant** - AI-powered playbook generation (built into AAP 2.6+, required for Case 5 - Unknown Events)
 - **[AAP MCP Server](https://github.com/ansible/aap-mcp-server)** - Model Context Protocol server for Ansible Automation Platform
 - **[ansible.mcp Collection](https://github.com/ansible-collections/ansible.mcp)** - MCP client collection for Ansible
+- **[redhat.ai Collection](https://console.redhat.com/ansible/automation-hub/)** - Optional AI model serving for incident analysis
+- **[ansible.scm Collection](https://console.redhat.com/ansible/automation-hub/)** - Git operations for playbook commits
+
+## Key Collections
+
+| Collection | Purpose | Status |
+|------------|---------|--------|
+| `ansible.eda` | Event sources and rulebook engine | ✅ Required |
+| `ansible.mcp` | MCP client for AAP integration | ✅ Required |
+| `ansible.controller` | AAP configuration as code | ✅ Required |
+| `ansible.scm` | Git commit automation | ✅ Required |
+| `redhat.ai` | AI model serving (optional) | ⚠️ Optional |
 
 ## Setup
 
@@ -130,9 +146,9 @@ curl -X POST http://localhost:5000/webhook \
 
 ## Architecture
 
-### Maya Playbook Generation
+### Code Assistant Playbook Generation
 1. Receives event details (type, description, target)
-2. Calls Ansible Maya API for AI-generated playbook
+2. Calls Red Hat Code Assistant API for AI-generated playbook
 3. Saves playbook to `generated-playbooks/playbooks/`
 4. Commits and pushes to Git repository
 
@@ -166,9 +182,9 @@ generated-playbooks/
 ## Requirements
 
 ### Services
-- **[Ansible Maya](https://github.com/iamgini/ansible-maya)**: AI playbook generation service (http://localhost:8000) - Required for unknown event handling
+- **Red Hat Automation Code Assistant**: AI playbook generation (built into AAP 2.6+ Lightspeed) - Required for unknown event handling
 - **[AAP MCP Server](https://github.com/ansible/aap-mcp-server)**: Model Context Protocol server for AAP (http://localhost:3000/mcp)
-- **Ansible Automation Platform**: Version 2.6.4+ with MCP support
+- **Ansible Automation Platform**: Version 2.6+ with MCP and Lightspeed support
 
 ### Tools
 - Ansible Core 2.16+
@@ -241,7 +257,7 @@ ansible-playbook playbooks/find-matching-job-template.yml \
 - **[Scoring Algorithm](docs/SCORING-ALGORITHM.md)** - Template matching algorithm details
 
 ### Related Projects
-- **[Ansible Maya](https://github.com/iamgini/ansible-maya)** - AI-powered playbook generator
+- **Red Hat Automation Code Assistant** - AI-powered playbook generator (built into AAP 2.6+)
 - **[Ansible MCP Collection](https://github.com/ansible-collections/ansible.mcp)** - MCP client for Ansible
 - **[AAP MCP Server](https://github.com/ansible/aap-mcp-server)** - MCP server for AAP
 

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code when working with the Ansible AIOps /
 This project implements **intelligent event-driven automation** using:
 - **Ansible Event-Driven Automation (EDA)** for event processing
 - **Model Context Protocol (MCP)** for AAP integration via `ansible.mcp` collection
-- **AI-powered playbook generation** using Ansible Maya
+- **AI-powered playbook generation** using Red Hat Automation Code Assistant
 - **Smart job template matching** with weighted scoring algorithm (0-200+ points)
 
 ## Core Functionality
@@ -39,8 +39,8 @@ EDA rulebook at `rulebooks/find-template-on-unmatched-event.yml`:
 
 ### 3. AI Playbook Generation
 
-Legacy Maya integration in `generate-and-push.yml`:
-- Calls Ansible Maya API with event details
+Code Assistant integration in `generate-and-push.yml`:
+- Calls Red Hat Code Assistant API with event details
 - Generates playbooks using AI
 - Commits and pushes to Git repository
 
@@ -53,7 +53,11 @@ Legacy Maya integration in `generate-and-push.yml`:
 export AAP_MCP_SERVER_URL="http://localhost:3000/mcp"
 export AAP_BEARER_TOKEN="your_aap_oauth2_token_here"
 
-# Git Integration (for Maya playbook generation)
+# Red Hat Code Assistant (for AI playbook generation)
+export LIGHTSPEED_URL="http://localhost:8000/api/v0/ai/generations/"
+export LIGHTSPEED_TOKEN="${AAP_BEARER_TOKEN}"
+
+# Git Integration (for Code Assistant playbook generation)
 export GIT_TOKEN="ghp_your_github_token_here"
 
 # Optional: Direct Controller API Access
@@ -119,10 +123,10 @@ curl -X POST http://localhost:5000/webhook \
   }'
 ```
 
-### Maya Playbook Generation
+### Code Assistant Playbook Generation
 
 ```bash
-# Generate playbook using Maya
+# Generate playbook using Code Assistant
 ansible-playbook generate-and-push.yml \
   -e "event_type=high_cpu" \
   -e "event_description='CPU at 98%'" \
@@ -144,10 +148,10 @@ ansible-aiops/
 │   ├── ARCHITECTURE.md                   # System architecture diagrams
 │   ├── EDA-MCP-INTEGRATION.md           # Complete integration guide
 │   └── SCORING-ALGORITHM.md             # Scoring algorithm details
-├── generated-playbooks/                  # Maya-generated playbooks
+├── generated-playbooks/                  # Code Assistant-generated playbooks
 ├── requirements.yml                      # Collection dependencies
 ├── inventory.yml                         # Inventory with MCP vars
-├── generate-and-push.yml                # Maya integration playbook
+├── generate-and-push.yml                # Code Assistant integration playbook
 ├── test-mcp-integration.sh              # Automated testing
 ├── .env.example                         # Environment template
 ├── .gitignore                           # Git ignore rules

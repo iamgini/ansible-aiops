@@ -100,7 +100,7 @@
     # =========================================================================
     # This catches ALL events that don't match above rules
     # Launches AAP job template that runs:
-    #   MCP Search → Maya Generation → Git Push → (Future: Create Job Template)
+    #   MCP Search → Code Assistant Generation → Git Push → (Future: Create Job Template)
     # =========================================================================
     - name: Unknown Event - Launch AI Intelligence Job Template
       condition: event.payload is defined

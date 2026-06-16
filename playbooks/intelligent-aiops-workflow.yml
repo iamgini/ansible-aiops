@@ -4,7 +4,7 @@
 # Flow:
 #   1. Query AAP via MCP to find matching job templates
 #   2. If high-confidence match found → Launch AAP job template
-#   3. If no match → Generate playbook with Maya → Save to Git
+#   3. If no match → Generate playbook with Code Assistant → Save to Git
 #   4. (Future) Create new AAP job template from generated playbook
 
 - name: Intelligent AIOps Workflow for Unknown Events
@@ -15,11 +15,11 @@
     # Configuration passed from rulebook
     # event_type, event_description, event_host, event_severity
     # mcp_server_url, mcp_bearer_token
-    # maya_api_url, git_remote_url, git_token
+    # lightspeed_url, lightspeed_token, git_remote_url, git_token
 
     # Thresholds
     mcp_confidence_threshold: 100  # Score above this = auto-launch
-    mcp_minimum_score: 50          # Score below this = skip to Maya
+    mcp_minimum_score: 50          # Score below this = skip to Code Assistant
 
   tasks:
     # =========================================================================
@@ -75,7 +75,7 @@
           - "MCP Search Results:"
           - "Best Match: {{ best_match.name | default('None') }}"
           - "Score: {{ best_match.score | default(0) }}"
-          - "Decision: {{ 'Launch AAP' if (best_match.score | default(0) >= mcp_confidence_threshold) else ('Try Maya' if (best_match.score | default(0) < mcp_minimum_score) else 'Manual Review Needed') }}"
+          - "Decision: {{ 'Launch AAP' if (best_match.score | default(0) >= mcp_confidence_threshold) else ('Try Code Assistant' if (best_match.score | default(0) < mcp_minimum_score) else 'Manual Review Needed') }}"
       when: best_match is defined
 
     # =========================================================================
@@ -111,8 +111,14 @@
         - aap_job is defined
 
     # =========================================================================
-    # STEP 2b: If No Match or Low Score → Generate with Maya
+    # STEP 2b: If No Match or Low Score → Generate with Code Assistant
     # =========================================================================
+    # NOTE: Spec-Kit two-phase approval does NOT work here because:
+    #   - AAP jobs cannot pause mid-execution for approval
+    #   - Spec storage is in-memory only (lost between job runs)
+    #   - Phase 1 and Phase 2 would be separate AAP jobs
+    # For approval workflows in AAP, see: docs/APPROVAL-WORKFLOWS.md
+    # Options: Git-based PR approval, Slack approval, or external service
     - name: Generate unique run ID for temp directory
       ansible.builtin.set_fact:
         run_id: "{{ lookup('pipe', 'date +%Y%m%d-%H%M%S') }}"
@@ -122,63 +128,79 @@
 
     - name: Set temp clone directory path
       ansible.builtin.set_fact:
-        temp_clone_dir: "/tmp/ansible-maya-git-{{ run_id }}"
+        temp_clone_dir: "/tmp/ansible-code-assistant-git-{{ run_id }}"
       when: >
         best_match is not defined or
         best_match.score < mcp_minimum_score
 
     # -------------------------------------------------------------------------
-    # Option 1: Simple Generation (Faster, Single Agent)
+    # Build Code Assistant Prompt
     # -------------------------------------------------------------------------
-    # - name: Call Ansible Maya API to generate playbook (simple)
-    #   ansible.builtin.uri:
-    #     url: "{{ maya_api_url }}"
-    #     method: POST
-    #     body_format: json
-    #     body:
-    #       event_type: "{{ event_type }}"
-    #       description: "{{ event_description }}"
-    #       host: "{{ event_host }}"
-    #       severity: "{{ event_severity }}"
-    #     return_content: true
-    #     status_code: 200
-    #     timeout: 120
-    #   register: maya_response
-    #   when: >
-    #     best_match is not defined or
-    #     best_match.score < mcp_minimum_score
+    - name: Build Code Assistant prompt from event context
+      ansible.builtin.set_fact:
+        lightspeed_prompt: |
+          Create an Ansible playbook to remediate the following issue:
+
+          Event Type: {{ event_type }}
+          Description: {{ event_description }}
+          Target Host: {{ event_host }}
+          Severity: {{ event_severity }}
+          {% if event_service is defined and event_service | length > 0 %}Service: {{ event_service }}{% endif %}
+          {% if event_tags is defined and event_tags | length > 0 %}Tags: {{ event_tags | join(', ') }}{% endif %}
+
+          Requirements:
+          - Use FQCN (Fully Qualified Collection Names)
+          - Include error handling with block/rescue
+          - Add descriptive task names
+          - Use become: true where needed for privilege escalation
+          - Target the host: {{ event_host }}
+          - Make the playbook idempotent
+      when: >
+        best_match is not defined or
+        best_match.score < mcp_minimum_score
 
     # -------------------------------------------------------------------------
-    # Option 2: Multi-Agent Review (Higher Quality, Security + Best Practices)
-    # Adds 5-15% confidence boost with adversarial review
+    # Call Red Hat Automation Code Assistant API
     # -------------------------------------------------------------------------
-    - name: Call Ansible Maya API with multi-agent review
+    - name: Generate playbook with Red Hat Code Assistant
       ansible.builtin.uri:
-        url: "{{ maya_api_url }}?multi_agent_review=true"
+        url: "{{ lightspeed_url }}"
         method: POST
+        headers:
+          Authorization: "Bearer {{ lightspeed_token }}"
+          Content-Type: "application/json"
         body_format: json
         body:
-          event_type: "{{ event_type }}"
-          description: "{{ event_description }}"
-          host: "{{ event_host }}"
-          severity: "{{ event_severity }}"
+          text: "{{ lightspeed_prompt }}"
         return_content: true
         status_code: 200
-        timeout: 180  # Increased timeout for multi-agent processing
-      register: maya_response
+        timeout: 180  # Generous timeout for AI processing
+      register: lightspeed_response
       when: >
         best_match is not defined or
         best_match.score < mcp_minimum_score
 
-    - name: Display Maya generation results
+    - name: Display Code Assistant generation results
       ansible.builtin.debug:
         msg:
-          - "Maya Playbook Generation:"
-          - "Event ID: {{ maya_response.json.event_id }}"
-          - "Confidence: {{ maya_response.json.confidence_score * 100 }}%"
-          - "Model: {{ maya_response.json.generation_metadata.model }}"
-          - "Validation: {{ 'Passed' if maya_response.json.validation_passed else 'Failed' }}"
-      when: maya_response is defined
+          - "Code Assistant Playbook Generation:"
+          - "Status: {{ 'Success' if lightspeed_response.status == 200 else 'Failed' }}"
+          - "Playbook Length: {{ lightspeed_response.json.playbook | default(lightspeed_response.json.content | default('')) | length }} chars"
+      when: lightspeed_response is defined
+
+    - name: Extract and validate generated playbook
+      ansible.builtin.set_fact:
+        playbook_content: "{{ lightspeed_response.json.playbook | default(lightspeed_response.json.content | default('')) }}"
+      when: lightspeed_response is defined
+
+    - name: Validate generated playbook structure
+      ansible.builtin.assert:
+        that:
+          - playbook_content is defined
+          - playbook_content | length > 0
+          - "'- name:' in playbook_content or '---' in playbook_content"
+        fail_msg: "Generated playbook is invalid or empty"
+      when: lightspeed_response is defined
 
     # =========================================================================
     # STEP 3: Save Generated Playbook to Git
@@ -186,7 +208,7 @@
     - name: Generate playbook filename
       ansible.builtin.set_fact:
         playbook_filename: "{{ event_type }}_{{ event_host | regex_replace('\\.', '_') }}.yml"
-      when: maya_response is defined
+      when: lightspeed_response is defined
 
     - name: Clone git repository to temp directory
       ansible.builtin.git:
@@ -195,7 +217,7 @@
         version: main
         force: true
       when:
-        - maya_response is defined
+        - lightspeed_response is defined
         - git_token | length > 0
       no_log: true
 
@@ -205,16 +227,16 @@
         state: directory
         mode: '0755'
       when:
-        - maya_response is defined
+        - lightspeed_response is defined
         - git_token | length > 0
 
     - name: Save generated playbook to cloned repo
       ansible.builtin.copy:
-        content: "{{ maya_response.json.playbook }}"
+        content: "{{ playbook_content }}"
         dest: "{{ temp_clone_dir }}/playbooks/{{ playbook_filename }}"
         mode: '0644'
       when:
-        - maya_response is defined
+        - lightspeed_response is defined
         - git_token | length > 0
 
     - name: Configure git user
@@ -223,7 +245,7 @@
         chdir: "{{ temp_clone_dir }}"
       changed_when: false
       when:
-        - maya_response is defined
+        - lightspeed_response is defined
         - git_token | length > 0
 
     - name: Configure git email
@@ -232,7 +254,7 @@
         chdir: "{{ temp_clone_dir }}"
       changed_when: false
       when:
-        - maya_response is defined
+        - lightspeed_response is defined
         - git_token | length > 0
 
     - name: Add and commit playbook
@@ -241,13 +263,12 @@
           git add playbooks/{{ playbook_filename }} &&
           git commit -m "AI-generated playbook: {{ playbook_filename }}"
           -m "Event: {{ event_type }}"
-          -m "Confidence: {{ maya_response.json.confidence_score * 100 }}%"
-          -m "Generated by Ansible Maya via EDA"
+          -m "Generated by Red Hat Automation Code Assistant via EDA"
         chdir: "{{ temp_clone_dir }}"
       register: git_commit
       changed_when: true
       when:
-        - maya_response is defined
+        - lightspeed_response is defined
         - git_token | length > 0
 
     - name: Push to git repository
@@ -255,7 +276,7 @@
         cmd: "git push origin main"
         chdir: "{{ temp_clone_dir }}"
       when:
-        - maya_response is defined
+        - lightspeed_response is defined
         - git_token | length > 0
         - git_commit.changed
       register: git_push
@@ -265,7 +286,7 @@
         path: "{{ temp_clone_dir }}"
         state: absent
       when:
-        - maya_response is defined
+        - lightspeed_response is defined
         - git_token | length > 0
 
     # =========================================================================
@@ -277,8 +298,8 @@
           - "=========================================="
           - "✅ Intelligent AIOps Workflow Complete!"
           - "=========================================="
-          - "Workflow Path: {{ 'MCP → AAP Launch' if (best_match is defined and best_match.score >= mcp_confidence_threshold) else 'Maya → Git Push' }}"
+          - "Workflow Path: {{ 'MCP → AAP Launch' if (best_match is defined and best_match.score >= mcp_confidence_threshold) else 'Code Assistant → Git Push' }}"
           - "{{ 'AAP Job: ' + (best_match.name | default('N/A')) if (best_match is defined and best_match.score >= mcp_confidence_threshold) else 'Generated Playbook: ' + (playbook_filename | default('N/A')) }}"
-          - "{{ 'MCP Score: ' + (best_match.score | string) if (best_match is defined and best_match.score >= mcp_confidence_threshold) else 'Maya Confidence: ' + ((maya_response.json.confidence_score * 100) | string) + '%' }}"
+          - "{{ 'MCP Score: ' + (best_match.score | string) if (best_match is defined and best_match.score >= mcp_confidence_threshold) else 'Code Assistant: Success' }}"
           - "{{ 'Job ID: ' + (aap_job.id | string) if (aap_job is defined) else 'Git: ' + (git_remote_url | default('Local only')) }}"
           - "=========================================="

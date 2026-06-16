@@ -263,17 +263,17 @@ export CONTROLLER_USERNAME="admin"
 export CONTROLLER_PASSWORD="password"
 ```
 
-### Issue: Maya API not responding
+### Issue: Code Assistant API not responding
 
 ```
-Error: "Connection refused to localhost:8000"
+Error: "Connection refused to Code Assistant endpoint"
 ```
 
-**Fix:** Start Ansible Maya container:
+**Fix:** Verify AAP 2.6+ Lightspeed (Code Assistant) is deployed:
 ```bash
-cd ~/ansible-maya
-podman-compose up -d
-curl http://localhost:8000/health  # Verify
+# Code Assistant is built into AAP 2.6+ - verify deployment
+echo $LIGHTSPEED_URL
+# Check AAP Lightspeed service status via AAP admin interface or logs
 ```
 
 ### Issue: Git push fails

@@ -21,5 +21,6 @@ all:
     git_token: "{{ lookup('env', 'GIT_TOKEN') }}"
     git_remote_url: "{{ lookup('env', 'GIT_REMOTE_URL') | default('', true) }}"
 
-    # Maya Configuration
-    maya_api_url: "{{ lookup('env', 'MAYA_API_URL') | default('http://localhost:8000', true) }}"
+    # Red Hat Automation Code Assistant (Lightspeed) Configuration
+    lightspeed_url: "{{ lookup('env', 'LIGHTSPEED_URL') | default('http://localhost:8000/api/v0/ai/generations/', true) }}"
+    lightspeed_token: "{{ lookup('env', 'LIGHTSPEED_TOKEN') | default(lookup('env', 'AAP_BEARER_TOKEN'), true) }}"

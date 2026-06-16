@@ -8,11 +8,11 @@ Get up and running with intelligent job template matching in 5 minutes.
 - AAP MCP Server installed and running
 - Python 3.10+
 - Ansible Core 2.16+
-- **[Ansible Maya](https://github.com/iamgini/ansible-maya)** (optional) - For AI-powered playbook generation
+- **Red Hat Automation Code Assistant** (AAP 2.6+ Lightspeed) - For AI-powered playbook generation
 
 ## Related Projects
 
-This project integrates with **[Ansible Maya](https://github.com/iamgini/ansible-maya)** for AI-powered playbook generation when handling unknown events. See the Maya repository for installation and setup instructions.
+This project integrates with **Red Hat Automation Code Assistant** (AAP 2.6+ Lightspeed) for AI-powered playbook generation when handling unknown events. See the AAP 2.6 documentation for Lightspeed installation and setup instructions.
 
 ## Installation
 

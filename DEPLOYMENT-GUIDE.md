@@ -3,9 +3,10 @@
 ## Related Projects
 
 This deployment integrates with:
-- **[Ansible Maya](https://github.com/iamgini/ansible-maya)** - AI-powered playbook generator (required for Case 5 - Unknown Events)
+- **Red Hat Automation Code Assistant** (Lightspeed) - AI-powered playbook generator built into AAP 2.6+ (required for Case 5 - Unknown Events)
 - **[AAP MCP Server](https://github.com/ansible/aap-mcp-server)** - Model Context Protocol server for AAP
 - **[ansible.mcp Collection](https://github.com/ansible-collections/ansible.mcp)** - MCP client for Ansible
+- **[redhat.ai Collection](https://console.redhat.com/ansible/automation-hub/)** - AI model configuration and serving (optional for advanced AI analysis)
 
 ## Architecture Overview
 
@@ -52,7 +53,7 @@ This deployment integrates with:
 │     ├─ Score ≥100? → Launch AAP job template ✅                        │
 │     └─ Score <50?  → Continue to step 2                                │
 │                                                                          │
-│  2. Call Ansible Maya API → Generate playbook                          │
+│  2. Call Code Assistant API (Lightspeed) → Generate playbook          │
 │  3. Push to Git → ansible-ai-generated-playbooks                       │
 │  4. (Future) Create new AAP job template from generated playbook       │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -74,9 +75,10 @@ This deployment integrates with:
 
 | Service | Purpose | Required For | Status |
 |---------|---------|--------------|--------|
-| **[Ansible Maya](https://github.com/iamgini/ansible-maya)** | AI playbook generation | Case 5 (unknown events) | ✅ Running |
+| **Red Hat Code Assistant (Lightspeed)** | AI playbook generation | Case 5 (unknown events) | ✅ Built into AAP 2.6+ |
 | **AAP MCP Server** | Template intelligence | Case 5 (optional) | ⚠️ Optional |
 | **Git Repository** | Store generated playbooks | Case 5 | ✅ Ready |
+| **Red Hat AI** (optional) | Advanced incident analysis | Enhanced diagnostics | ⚠️ Optional |
 
 ### 3. No Local Execution Needed
 
@@ -234,7 +236,8 @@ env:
 - Execution Environment: Default
 - Variables:
   ```yaml
-  maya_api_url: "http://<ansible-maya-host>:8000/api/v1/events/generate"
+  lightspeed_url: "http://<lightspeed-host>:8000/api/v0/ai/generations/"
+  lightspeed_token: "{{ lookup('env', 'LIGHTSPEED_TOKEN') }}"
   git_remote_url: "https://github.com/iamgini/ansible-ai-generated-playbooks"
   ```
 - Prompt on Launch: `Extra Variables`
@@ -360,14 +363,18 @@ curl -X POST https://your-eda-controller:5000/webhook \
 - Filter by Template name
 - View execution history, logs, outputs
 
-### Monitor Maya API
+### Monitor Code Assistant API
 
 ```bash
-# Check Maya health
-curl http://<maya-host>:8000/health
+# Check Code Assistant (Lightspeed) endpoint
+curl -X POST "${LIGHTSPEED_URL}" \
+  -H "Authorization: Bearer ${LIGHTSPEED_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "ping"}'
 
-# View Maya logs
-podman logs ansible-maya -f
+# View Lightspeed logs (containerized AAP)
+podman logs automation-controller -f
+podman logs lightspeed-coding-assistant -f  # If separate container
 ```
 
 ### Git Repository Monitoring
@@ -399,15 +406,18 @@ telnet your-eda-controller 5000
 - Job template name matches rulebook exactly?
 - Job template enabled "Prompt on Launch" for variables?
 
-### Issue: Maya API not responding
+### Issue: Code Assistant API not responding
 
 **Check:**
 ```bash
-# Verify Maya container
-podman ps | grep ansible-maya
+# Verify Lightspeed service is running
+podman ps | grep lightspeed
 
-# Check Maya logs
-podman logs ansible-maya
+# Check Lightspeed logs
+podman logs lightspeed-coding-assistant
+
+# Verify AAP 2.6+ Lightspeed is enabled
+# Check AAP admin interface → Settings → Lightspeed
 
 # Test Maya API
 curl http://<maya-host>:8000/api/v1/events/generate \
