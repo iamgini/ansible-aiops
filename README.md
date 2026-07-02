@@ -6,7 +6,7 @@ Intelligent event-driven automation using Ansible EDA, MCP (Model Context Protoc
 
 ## Features
 
-- **AI-Powered Playbook Generation**: Uses Red Hat Automation Code Assistant (AAP 2.6+ Lightspeed) to generate playbooks based on events
+- **AI-Powered Playbook Generation**: Uses Ansible Automation Platform's automation coding assistant (formerly Ansible Lightspeed) to generate playbooks based on events
 - **Intelligent Job Template Matching**: MCP integration to find suitable AAP job templates for events
 - **Event-Driven Automation**: EDA rulebooks for automated responses with multi-source support (Kafka, webhooks, file logs)
 - **Git Integration**: Automatic commit and push of generated playbooks using `ansible.scm` collection
@@ -19,14 +19,15 @@ Intelligent event-driven automation using Ansible EDA, MCP (Model Context Protoc
 
 This project can work with multiple AI backends for playbook generation:
 
-1. **[Red Hat Ansible Lightspeed with IBM watsonx Code Assistant](https://developers.redhat.com/products/ansible/lightspeed)** (Recommended)
-   - **Official Documentation**: [Red Hat Ansible Lightspeed User Guide](https://docs.redhat.com/en/documentation/red_hat_ansible_lightspeed_with_ibm_watsonx_code_assistant/2.x_latest/html/red_hat_ansible_lightspeed_with_ibm_watsonx_code_assistant_user_guide/lightspeed-intro)
-   - **Product Page**: [Red Hat Automation coding assistant](https://www.redhat.com/en/technologies/management/ansible/automation-coding-assistant)
-   - Commercial product built into AAP 2.6+
-   - Includes subscription support
-   - Model backends: IBM watsonx (default), Google Gemini (Vertex), Red Hat AI
+1. **[Red Hat Ansible Automation Platform](https://www.redhat.com/en/technologies/management/ansible/trial)** - automation coding assistant feature (Recommended)
+   - **Product**: [Red Hat Ansible Automation Platform](https://www.redhat.com/en/technologies/management/ansible/trial) (AAP 2.6+)
+   - **Feature**: Automation coding assistant (formerly "Ansible Lightspeed") - included with AAP subscription
+   - **Official Documentation**: [Ansible Lightspeed User Guide](https://docs.redhat.com/en/documentation/red_hat_ansible_lightspeed_with_ibm_watsonx_code_assistant/2.x_latest/html/red_hat_ansible_lightspeed_with_ibm_watsonx_code_assistant_user_guide/lightspeed-intro)
+   - **Developer Portal**: [Ansible Lightspeed with IBM watsonx](https://developers.redhat.com/products/ansible/lightspeed)
+   - Commercial support included with AAP subscription
+   - Model backends: [IBM watsonx Code Assistant](https://www.ibm.com/products/watsonx-code-assistant-ansible-lightspeed) (default), Google Gemini (Vertex), Red Hat AI
    - OpenAI and Azure OpenAI support coming in early 2026
-   - Formerly called "Red Hat Ansible Lightspeed"
+   - 60-day free trial available
 
 2. **[ansible-ai-connect-service](https://github.com/ansible/ansible-ai-connect-service)** (Open Source Alternative)
    - Open-source community project (basis for Lightspeed)
@@ -43,8 +44,8 @@ This project can work with multiple AI backends for playbook generation:
    - **Related service**: [ansible-chatbot-service](https://github.com/ansible/ansible-chatbot-service) for conversational AI
 
 **Which to choose?**
-- Use **Lightspeed** if you have AAP subscription (easier, supported)
-- Use **ansible-ai-connect-service** if you need custom models, air-gapped deployment, or specific LLM backends
+- Use **Ansible Automation Platform** (with automation coding assistant feature) if you have/want AAP subscription (easier, commercially supported)
+- Use **ansible-ai-connect-service** if you need custom models, air-gapped deployment, or specific LLM backends without AAP
 
 ### Infrastructure Services
 
@@ -215,12 +216,12 @@ generated-playbooks/
 ### Services
 
 **AI Playbook Generation** (choose one):
-- **Option 1 (Recommended)**: [Red Hat Ansible Lightspeed](https://developers.redhat.com/products/ansible/lightspeed) - Built into AAP 2.6+, commercial support
+- **Option 1 (Recommended)**: [Red Hat Ansible Automation Platform](https://www.redhat.com/en/technologies/management/ansible/trial) 2.6+ - Includes automation coding assistant feature, commercial support
 - **Option 2 (Open Source)**: [ansible-ai-connect-service](https://github.com/ansible/ansible-ai-connect-service) - Self-hosted, supports multiple LLM backends (OpenAI, Azure OpenAI, Watsonx, RHOAI, RHEL AI, Ollama)
 
 **Infrastructure**:
 - **[AAP MCP Server](https://github.com/ansible/aap-mcp-server)**: Model Context Protocol server for AAP (http://localhost:3000/mcp)
-- **Ansible Automation Platform**: Version 2.6+ with MCP support
+- **[Ansible Automation Platform](https://www.redhat.com/en/technologies/management/ansible/trial)**: Version 2.6+ with MCP support
 
 ### Tools
 - Ansible Core 2.16+
@@ -294,10 +295,12 @@ ansible-playbook playbooks/find-matching-job-template.yml \
 
 ### External Documentation & Resources
 
-**Official Red Hat Documentation:**
-- **[Red Hat Ansible Lightspeed User Guide](https://docs.redhat.com/en/documentation/red_hat_ansible_lightspeed_with_ibm_watsonx_code_assistant/2.x_latest/html/red_hat_ansible_lightspeed_with_ibm_watsonx_code_assistant_user_guide/lightspeed-intro)** - Complete Lightspeed documentation
-- **[Red Hat Ansible Automation Platform 2.6+ Docs](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/develop-con_lightspeed_about)** - AAP Lightspeed overview
-- **[Ansible Automation Coding Assistant Product Page](https://www.redhat.com/en/technologies/management/ansible/automation-coding-assistant)** - Features and subscription info
+**Official Red Hat Products & Documentation:**
+- **[Red Hat Ansible Automation Platform](https://www.redhat.com/en/technologies/management/ansible/trial)** - Main product (includes automation coding assistant feature)
+- **[Ansible Lightspeed User Guide](https://docs.redhat.com/en/documentation/red_hat_ansible_lightspeed_with_ibm_watsonx_code_assistant/2.x_latest/html/red_hat_ansible_lightspeed_with_ibm_watsonx_code_assistant_user_guide/lightspeed-intro)** - Automation coding assistant documentation
+- **[AAP 2.6+ Lightspeed Overview](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/develop-con_lightspeed_about)** - Feature overview
+- **[Ansible Lightspeed with IBM watsonx](https://developers.redhat.com/products/ansible/lightspeed)** - Developer portal
+- **[IBM watsonx Code Assistant for Ansible](https://www.ibm.com/products/watsonx-code-assistant-ansible-lightspeed)** - IBM's AI model service (partner product)
 
 **Open Source Projects:**
 - **[ansible-ai-connect-service](https://github.com/ansible/ansible-ai-connect-service)** - Open-source AI service (basis for Lightspeed)
