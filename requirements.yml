@@ -1,20 +1,27 @@
 ---
+# Ansible Collection Requirements for AIOps Execution Environment
+
 collections:
-  # MCP Collection for interacting with AAP via MCP server
+  # Event-Driven Automation (Required for rulebooks)
+  - name: ansible.eda
+    version: ">=1.0.0"
+
+  # Model Context Protocol Client (Required for MCP integration)
   - name: ansible.mcp
     version: ">=1.0.0"
 
-  # Utils collection (dependency of ansible.mcp)
+  # Ansible Utilities (Dependency of ansible.mcp)
   - name: ansible.utils
     version: ">=2.0.0"
 
-  # AAP Configuration collections
-  - name: ansible.platform
-    version: ">=1.0.0"
-
+  # AAP Controller (Required for MCP and configuration)
   - name: ansible.controller
     version: ">=4.5.0"
 
-  # EDA collection for event-driven automation
-  - name: ansible.eda
+  # AWX/AAP Job Launching (Required for launching templates)
+  - name: awx.awx
+    version: ">=23.0.0"
+
+  # Platform Integration (Optional)
+  - name: ansible.platform
     version: ">=1.0.0"

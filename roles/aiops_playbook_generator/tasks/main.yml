@@ -1,0 +1,39 @@
+---
+# Role: aiops_playbook_generator
+# Generate Ansible playbooks using AI (pluggable backend: Lightspeed or Coder)
+
+- name: Display AI backend selection
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "AI Playbook Generator"
+      - "=========================================="
+      - "Backend: {{ ai_backend }}"
+      - "Event Type: {{ event_type }}"
+      - "Description: {{ event_description }}"
+      - "Host: {{ event_host }}"
+      - "Severity: {{ event_severity }}"
+      - "=========================================="
+
+- name: Validate AI backend selection
+  ansible.builtin.assert:
+    that:
+      - ai_backend in ['lightspeed', 'coder']
+    fail_msg: "Invalid ai_backend: {{ ai_backend }}. Must be 'lightspeed' or 'coder'"
+
+- name: Include Lightspeed backend tasks
+  ansible.builtin.include_tasks: backend_lightspeed.yml
+  when: ai_backend == 'lightspeed'
+
+- name: Include Coder backend tasks
+  ansible.builtin.include_tasks: backend_coder.yml
+  when: ai_backend == 'coder'
+
+- name: Display generation completion status
+  ansible.builtin.debug:
+    msg:
+      - "AI Playbook Generator Complete"
+      - "Backend: {{ ai_backend_used }}"
+      - "Generated: playbooks/{{ ai_playbook_filename }}"
+      - "Git Pushed: {{ ai_git_pushed }}"
+      - "{{ 'Workspace: ' + ai_workspace_name if ai_backend_used == 'coder' else '' }}"

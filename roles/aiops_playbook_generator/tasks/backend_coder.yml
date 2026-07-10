@@ -1,0 +1,150 @@
+---
+# Backend: Coder (Cloud development environments + Claude Code CLI)
+
+- name: Generate unique run ID for workspace naming
+  ansible.builtin.set_fact:
+    run_id: "{{ lookup('pipe', 'date +%Y%m%d-%H%M%S') }}"
+    workspace_name: "aiops-{{ event_type | lower | regex_replace('[^a-z0-9]', '-') }}-{{ lookup('pipe', 'date +%Y%m%d-%H%M%S') }}"
+
+- name: Check if Coder CLI is available
+  ansible.builtin.command:
+    cmd: coder version
+  register: coder_version
+  changed_when: false
+  failed_when: false
+
+- name: Fail if Coder CLI not found
+  ansible.builtin.fail:
+    msg: "Coder CLI is not installed or not in PATH. Install from: https://coder.com/docs/install"
+  when: coder_version.rc != 0
+
+- name: Display Coder version
+  ansible.builtin.debug:
+    msg: "Using Coder CLI: {{ coder_version.stdout }}"
+
+- name: Create Coder workspace from template
+  ansible.builtin.command:
+    cmd: >
+      coder create {{ workspace_name }}
+      --template {{ coder_template_name }}
+      --parameter-file /dev/stdin
+      --yes
+    stdin: |
+      event_type: "{{ event_type }}"
+      event_description: "{{ event_description }}"
+      event_host: "{{ event_host }}"
+      event_severity: "{{ event_severity }}"
+      event_service: "{{ event_service | default('') }}"
+      event_tags: "{{ event_tags | default([]) | join(',') }}"
+      git_remote_url: "{{ git_remote_url }}"
+  register: coder_create
+  timeout: 120
+
+- name: Wait for workspace to be ready
+  ansible.builtin.command:
+    cmd: coder list --output json
+  register: workspace_status
+  retries: 30
+  delay: 5
+  until: >
+    workspace_status.stdout | from_json |
+    selectattr('name', 'equalto', workspace_name) |
+    map(attribute='status') | first == 'Running'
+
+- name: Display workspace creation result
+  ansible.builtin.debug:
+    msg:
+      - "✅ Coder Workspace Created"
+      - "Workspace: {{ workspace_name }}"
+      - "Status: {{ workspace_status.stdout | from_json | selectattr('name', 'equalto', workspace_name) | map(attribute='status') | first }}"
+      - "URL: {{ coder_url }}/{{ workspace_name }}"
+
+- name: Build Claude Code prompt from event context
+  ansible.builtin.set_fact:
+    claude_prompt: |
+      Create an Ansible playbook to remediate the following issue:
+
+      Event Type: {{ event_type }}
+      Description: {{ event_description }}
+      Target Host: {{ event_host }}
+      Severity: {{ event_severity }}
+      {% if event_service is defined and event_service | length > 0 %}Service: {{ event_service }}{% endif %}
+      {% if event_tags is defined and event_tags | length > 0 %}Tags: {{ event_tags | join(', ') }}{% endif %}
+
+      Requirements:
+      - Use FQCN (Fully Qualified Collection Names)
+      - Include error handling with block/rescue
+      - Add descriptive task names
+      - Use become: true where needed for privilege escalation
+      - Target the host: {{ event_host }}
+      - Make the playbook idempotent
+      - Save the playbook to: playbooks/{{ event_type | lower | regex_replace('[^a-z0-9]', '_') }}_{{ event_host | regex_replace('\\.', '_') }}.yml
+
+      After creating the playbook:
+      1. Run ansible-lint to validate syntax
+      2. Add and commit the playbook to git with message: "AI-generated playbook for {{ event_type }} on {{ event_host }}"
+      3. Push to remote repository
+
+- name: Generate playbook filename
+  ansible.builtin.set_fact:
+    playbook_filename: "{{ event_type | lower | regex_replace('[^a-z0-9]', '_') }}_{{ event_host | regex_replace('\\.', '_') }}.yml"
+
+- name: Execute Claude Code via Coder SSH
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      coder ssh {{ workspace_name }} -- bash -c 'echo "{{ claude_prompt }}" | claude --yes'
+  register: claude_execution
+  timeout: "{{ workspace_timeout }}"
+
+- name: Display Claude Code execution result
+  ansible.builtin.debug:
+    msg:
+      - "Claude Code Execution:"
+      - "{{ claude_execution.stdout_lines }}"
+
+- name: Verify playbook was generated and pushed to git
+  ansible.builtin.command:
+    cmd: >
+      coder ssh {{ workspace_name }} --
+      test -f playbooks/{{ playbook_filename }} && echo "exists"
+  register: playbook_verification
+  failed_when: playbook_verification.stdout != "exists"
+
+- name: Retrieve generated playbook content for logging
+  ansible.builtin.command:
+    cmd: >
+      coder ssh {{ workspace_name }} --
+      cat playbooks/{{ playbook_filename }}
+  register: playbook_content
+
+- name: Display generated playbook summary
+  ansible.builtin.debug:
+    msg:
+      - "✅ Playbook Generated Successfully"
+      - "Filename: playbooks/{{ playbook_filename }}"
+      - "Size: {{ playbook_content.stdout | length }} bytes"
+      - "Git Repository: {{ git_remote_url }}"
+
+- name: Stop and delete Coder workspace
+  ansible.builtin.command:
+    cmd: coder delete {{ workspace_name }} --yes
+  when:
+    - auto_cleanup_workspace | bool
+    - playbook_verification.stdout == "exists"
+  register: workspace_cleanup
+
+- name: Display cleanup result
+  ansible.builtin.debug:
+    msg: "Workspace {{ workspace_name }} deleted"
+  when:
+    - workspace_cleanup is defined
+    - workspace_cleanup.rc == 0
+
+- name: Set generation results
+  ansible.builtin.set_fact:
+    ai_generation_completed: true
+    ai_backend_used: "coder"
+    ai_playbook_filename: "{{ playbook_filename }}"
+    ai_workspace_name: "{{ workspace_name if not (auto_cleanup_workspace | bool) else 'deleted' }}"
+    ai_git_pushed: true

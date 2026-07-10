@@ -1,0 +1,109 @@
+---
+# ============================================================================
+# AIOps Execution Environment Definition (with Coder CLI)
+# ============================================================================
+#
+# Purpose:
+#   Custom execution environment for Intelligent AIOps workflow
+#   Includes Coder CLI for cloud development environment integration
+#
+# Compatible with:
+#   - Ansible Automation Platform 2.6+
+#   - Ansible EDA (Event-Driven Automation)
+#   - Coder v2.0+
+#
+# Build Command:
+#   ansible-builder build -t aiops-ee:latest -v 3
+#
+# Push to Registry:
+#   podman tag aiops-ee:latest registry.example.com/aiops-ee:latest
+#   podman push registry.example.com/aiops-ee:latest
+#
+# Author: AIOps Team
+# Last Updated: 2026-07-10
+# ============================================================================
+
+version: 3
+
+# ----------------------------------------------------------------------------
+# Base Image Configuration
+# ----------------------------------------------------------------------------
+# Using official Red Hat Ansible Automation Platform EE base image
+# RHEL 9 based with Python 3.12
+
+images:
+  base_image:
+    name: registry.redhat.io/ansible-automation-platform-26/ee-supported-rhel9:latest
+
+# ----------------------------------------------------------------------------
+# Dependencies
+# ----------------------------------------------------------------------------
+
+dependencies:
+  # Python packages from requirements.txt
+  python: requirements.txt
+
+  # Ansible collections from requirements.yml
+  galaxy: requirements.yml
+
+  # System packages (bindep format)
+  system: bindep.txt
+
+# ----------------------------------------------------------------------------
+# Additional Build Steps
+# ----------------------------------------------------------------------------
+
+additional_build_steps:
+  # Builder stage: Install build dependencies
+  prepend_builder:
+    - RUN microdnf install -y \
+        gcc \
+        python3.12-devel \
+        git \
+        curl && \
+        microdnf clean all
+
+  # Final stage: Install Coder CLI and verify
+  append_final:
+    # Install Coder CLI
+    - RUN curl -fsSL https://coder.com/install.sh | sh
+
+    # Verify Coder CLI installation
+    - RUN coder version || echo "Coder CLI installed (requires authentication at runtime)"
+
+    # Create directory for temporary git clones
+    - RUN mkdir -p /tmp/aiops-git-workdir && chmod 1777 /tmp/aiops-git-workdir
+
+    # Set environment variables for AIOps workflow
+    - ENV AIOPS_EE_VERSION="1.0.0"
+    - ENV ANSIBLE_HOST_KEY_CHECKING="False"
+    - ENV ANSIBLE_LOCALHOST_WARNING="False"
+
+# ----------------------------------------------------------------------------
+# Options
+# ----------------------------------------------------------------------------
+
+options:
+  # Package manager cache retention for faster rebuilds
+  package_manager_path: /usr/bin/microdnf
+
+# ----------------------------------------------------------------------------
+# Notes
+# ----------------------------------------------------------------------------
+# 1. Coder CLI requires authentication at runtime:
+#    - Set CODER_URL environment variable
+#    - Set CODER_SESSION_TOKEN for authentication
+#    - Or run 'coder login' interactively before first use
+#
+# 2. This EE includes both Lightspeed and Coder backends:
+#    - Lightspeed: Direct API calls to Code Assistant
+#    - Coder: Create workspaces + execute Claude Code remotely
+#
+# 3. Collections included:
+#    - ansible.eda (Event-Driven Automation)
+#    - ansible.mcp (Model Context Protocol client)
+#    - ansible.controller (AAP controller interaction)
+#    - awx.awx (Job launching)
+#
+# 4. Build time: ~3-5 minutes
+# 5. Final image size: ~1.2-1.5 GB

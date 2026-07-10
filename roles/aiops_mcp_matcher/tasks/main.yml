@@ -1,0 +1,107 @@
+---
+# Role: aiops_mcp_matcher
+# Query AAP via MCP to find matching job templates and launch if found
+
+- name: Display event context for MCP matching
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "MCP Matcher - Searching for Job Templates"
+      - "=========================================="
+      - "Event Type: {{ event_type }}"
+      - "Description: {{ event_description }}"
+      - "Host: {{ event_host }}"
+      - "Severity: {{ event_severity }}"
+      - "Service: {{ event_service | default('N/A') }}"
+      - "Tags: {{ event_tags | default([]) | join(', ') }}"
+      - "=========================================="
+
+- name: Skip MCP query if server URL not configured
+  ansible.builtin.set_fact:
+    mcp_completed: false
+    mcp_skip_reason: "MCP server URL not configured"
+  when: mcp_server_url | length == 0
+
+- name: Query AAP MCP server for matching job templates
+  ansible.builtin.uri:
+    url: "{{ mcp_server_url }}/tools/list_job_templates"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ mcp_bearer_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      params:
+        event_type: "{{ event_type }}"
+        service: "{{ event_service | default('') }}"
+        hostname: "{{ event_host }}"
+        severity: "{{ event_severity }}"
+        tags: "{{ event_tags | default([]) }}"
+    return_content: true
+    status_code: [200, 404]
+    timeout: 30
+  register: mcp_response
+  when: mcp_server_url | length > 0
+  failed_when: false
+
+- name: Parse MCP results and find best match
+  ansible.builtin.set_fact:
+    best_match: "{{ mcp_response.json.content[0].templates | sort(attribute='score', reverse=true) | first }}"
+  when:
+    - mcp_response is defined
+    - mcp_response.status == 200
+    - mcp_response.json.content[0].templates | length > 0
+
+- name: Display MCP matching results
+  ansible.builtin.debug:
+    msg:
+      - "MCP Search Results:"
+      - "Best Match: {{ best_match.name | default('None') }}"
+      - "Score: {{ best_match.score | default(0) }}"
+      - "Decision: {{ 'Launch AAP Job' if (best_match.score | default(0) >= mcp_confidence_threshold) else ('Try AI Generation' if (best_match.score | default(0) < mcp_minimum_score) else 'Manual Review Needed') }}"
+  when: best_match is defined
+
+- name: Launch AAP job template (high confidence match)
+  awx.awx.job_launch:
+    controller_host: "{{ controller_host }}"
+    controller_username: "{{ controller_username }}"
+    controller_password: "{{ controller_password }}"
+    validate_certs: "{{ controller_verify_ssl }}"
+    job_template: "{{ best_match.name }}"
+    limit: "{{ event_host }}"
+    extra_vars:
+      event_type: "{{ event_type }}"
+      event_severity: "{{ event_severity }}"
+    wait: false
+  register: aap_job
+  when:
+    - best_match is defined
+    - best_match.score >= mcp_confidence_threshold
+
+- name: Set MCP completion status - Job launched
+  ansible.builtin.set_fact:
+    mcp_completed: true
+    mcp_action: "aap_job_launched"
+    mcp_job_id: "{{ aap_job.id }}"
+    mcp_template_name: "{{ best_match.name }}"
+    mcp_score: "{{ best_match.score }}"
+  when:
+    - best_match is defined
+    - best_match.score >= mcp_confidence_threshold
+    - aap_job is defined
+
+- name: Set MCP completion status - No match or low score
+  ansible.builtin.set_fact:
+    mcp_completed: false
+    mcp_action: "no_match"
+    mcp_score: "{{ best_match.score | default(0) }}"
+  when: >
+    best_match is not defined or
+    best_match.score < mcp_confidence_threshold
+
+- name: Display MCP role completion status
+  ansible.builtin.debug:
+    msg:
+      - "MCP Matcher Complete"
+      - "Status: {{ 'Job Launched' if mcp_completed else 'No Match - Proceed to AI Generation' }}"
+      - "{{ 'Template: ' + mcp_template_name + ' (Job ID: ' + (mcp_job_id | string) + ')' if mcp_completed else 'Next Step: AI Playbook Generation' }}"

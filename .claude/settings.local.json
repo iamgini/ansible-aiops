@@ -9,7 +9,12 @@
       "Bash(git push *)",
       "Bash(grep -E \"\\\\.\\(sh|py|json\\)$\")",
       "Bash(ansible-playbook *)",
-      "WebFetch(domain:ansible-tmm.github.io)"
+      "WebFetch(domain:ansible-tmm.github.io)",
+      "Bash(jq '.projects.\"/home/gmadappa/ansible/ansible-aiops\".hasTrustDialogAccepted = true' /home/gmadappa/.claude.json)",
+      "Bash(mv /tmp/claude.json.tmp /home/gmadappa/.claude.json)",
+      "WebSearch",
+      "Bash(cat)",
+      "Read(//tmp/**)"
     ]
   }
 }
