@@ -4,11 +4,10 @@
 
 ```
 playbooks/
-├── remediation/                              ← AAP Remediation Playbooks
-│   ├── disk-cleanup.yml                     ✅ Case 1 (170 lines)
-│   ├── restart-service.yml                  ✅ Case 2 (121 lines)
-│   ├── investigate-cpu.yml                  ✅ Case 3 (214 lines)
-│   └── renew-certificate.yml                ✅ Case 4 (213 lines)
+├── remediation_disk-cleanup.yml             ✅ Case 1 (170 lines)
+├── remediation_restart-service.yml          ✅ Case 2 (121 lines)
+├── remediation_investigate-cpu.yml          ✅ Case 3 (214 lines)
+├── remediation_renew-certificate.yml        ✅ Case 4 (213 lines)
 ├── intelligent-aiops-workflow.yml           ✅ Case 5 (AI Intelligence)
 └── generate-and-push.yml                    ✅ Standalone tool
 
@@ -173,10 +172,10 @@ web_service: httpd  # or nginx, apache2
 
 | # | EDA Rulebook Case | Playbook | AAP Job Template Name |
 |---|-------------------|----------|----------------------|
-| 1 | High Disk Usage | `remediation/disk-cleanup.yml` | `Remediate Disk Space` |
-| 2 | Service Down | `remediation/restart-service.yml` | `Restart Service` |
-| 3 | High CPU | `remediation/investigate-cpu.yml` | `Investigate High CPU` |
-| 4 | Certificate Expiry | `remediation/renew-certificate.yml` | `Renew SSL Certificate` |
+| 1 | High Disk Usage | `remediation_disk-cleanup.yml` | `Remediate Disk Space` |
+| 2 | Service Down | `remediation_restart-service.yml` | `Restart Service` |
+| 3 | High CPU | `remediation_investigate-cpu.yml` | `Investigate High CPU` |
+| 4 | Certificate Expiry | `remediation_renew-certificate.yml` | `Renew SSL Certificate` |
 | 5 | Unknown Event | `intelligent-aiops-workflow.yml` | `AI Intelligence - Unknown Event Remediation` |
 
 ---
@@ -198,7 +197,7 @@ For each of the 4 remediation playbooks:
 
 1. **AAP UI** → Templates → Add → Job Template
 2. **Project:** `ansible-aiops`
-3. **Playbook:** `playbooks/remediation/<playbook-name>.yml`
+3. **Playbook:** `playbooks/remediation_<playbook-name>.yml`
 4. **Inventory:** Your production inventory
 5. **Credentials:** Machine credential for target hosts
 6. **Prompt on Launch:**
@@ -243,22 +242,22 @@ web_service: "httpd"
 
 ```bash
 # Test disk cleanup
-ansible-playbook playbooks/remediation/disk-cleanup.yml \
+ansible-navigator run playbooks/remediation_disk-cleanup.yml -m stdout \
   -i localhost, \
   -e "partition=/tmp usage_percent=50"
 
 # Test service restart
-ansible-playbook playbooks/remediation/restart-service.yml \
+ansible-navigator run playbooks/remediation_restart-service.yml -m stdout \
   -i localhost, \
   -e "service_name=chronyd"
 
 # Test CPU investigation
-ansible-playbook playbooks/remediation/investigate-cpu.yml \
+ansible-navigator run playbooks/remediation_investigate-cpu.yml -m stdout \
   -i localhost, \
   -e "cpu_threshold=50"
 
 # Test certificate renewal
-ansible-playbook playbooks/remediation/renew-certificate.yml \
+ansible-navigator run playbooks/remediation_renew-certificate.yml -m stdout \
   -i localhost, \
   -e "cert_path=/etc/ssl/certs/ca-bundle.crt"
 ```

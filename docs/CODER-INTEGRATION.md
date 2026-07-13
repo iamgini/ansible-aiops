@@ -615,7 +615,7 @@ rules:
 
 ```bash
 # Run workflow with event context
-ansible-playbook playbooks/intelligent-aiops-workflow-coder.yml \
+ansible-navigator run playbooks/intelligent-aiops-workflow-coder.yml -m stdout \
   -i inventory.yml \
   -e "event_type=disk_alert" \
   -e "event_description='Disk usage at 95% on /var'" \
@@ -629,7 +629,7 @@ ansible-playbook playbooks/intelligent-aiops-workflow-coder.yml \
 
 ```bash
 # Simplest test
-ansible-playbook playbooks/intelligent-aiops-workflow-coder.yml \
+ansible-navigator run playbooks/intelligent-aiops-workflow-coder.yml -m stdout \
   -e "event_type=test" \
   -e "event_description='Test event for Coder integration'" \
   -e "event_host=localhost" \
@@ -879,7 +879,7 @@ coder ssh {workspace_name} -- env | grep ANTHROPIC
 
 ```bash
 # Run with verbose output
-ansible-playbook playbooks/intelligent-aiops-workflow-coder.yml -vvv
+ansible-navigator run playbooks/intelligent-aiops-workflow-coder.yml -m stdout -vvv
 
 # SSH into workspace and test Claude Code manually
 coder ssh {workspace_name}

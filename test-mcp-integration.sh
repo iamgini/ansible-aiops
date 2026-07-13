@@ -56,7 +56,7 @@ fi
 echo "4. Testing playbook with sample event..."
 echo -e "${YELLOW}Running: find-matching-job-template.yml${NC}\n"
 
-ansible-playbook playbooks/find-matching-job-template.yml \
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
     -e "event_type=disk_alert" \
     -e "event_source=monitoring_system" \
     -e "event_service=nginx" \

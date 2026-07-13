@@ -469,7 +469,7 @@ Monitoring System → EDA Webhook/Kafka/Source → EDA Rulebook
 │  Frontend/Interface:                                    │
 │    • AAP Web UI                                         │
 │    • EDA Dashboard                                      │
-│    • CLI (ansible-playbook, ansible-rulebook)          │
+│    • CLI (ansible-navigator, ansible-rulebook)          │
 │                                                          │
 │  Automation Layer:                                      │
 │    • Ansible Core 2.16+                                 │

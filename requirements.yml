@@ -25,3 +25,7 @@ collections:
   # Platform Integration (Optional)
   - name: ansible.platform
     version: ">=1.0.0"
+
+  # AAP Configuration as Code (Required for dynamic JT/WF creation)
+  - name: infra.aap_configuration
+    version: ">=2.0.0"

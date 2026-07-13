@@ -1,9 +1,10 @@
 ---
-# Backend: Lightspeed (Red Hat Automation Code Assistant API)
+# Backend: Generic API (OpenAI-compatible chat completions endpoint)
+# Works with: OpenAI, Azure OpenAI, vLLM, Ollama, LiteLLM, and other compatible APIs
 
-- name: Build Code Assistant prompt from event context
+- name: Build remediation prompt from event context
   ansible.builtin.set_fact:
-    lightspeed_prompt: |
+    generation_prompt: |
       Create an Ansible playbook to remediate the following issue:
 
       Event Type: {{ event_type }}
@@ -20,32 +21,52 @@
       - Use become: true where needed for privilege escalation
       - Target the host: {{ event_host }}
       - Make the playbook idempotent
+      - Return ONLY the YAML playbook content, no markdown fences or explanations
 
-- name: Generate playbook with Red Hat Code Assistant API
-  ansible.builtin.uri:
-    url: "{{ lightspeed_url }}"
-    method: POST
-    headers:
-      Authorization: "Bearer {{ lightspeed_token }}"
+- name: Build API request headers
+  ansible.builtin.set_fact:
+    generic_api_headers:
       Content-Type: "application/json"
+      Authorization: "Bearer {{ generic_api_token }}"
+
+- name: Remove Authorization header when no token provided
+  ansible.builtin.set_fact:
+    generic_api_headers:
+      Content-Type: "application/json"
+  when: generic_api_token | length == 0
+
+- name: Generate playbook with OpenAI-compatible API
+  ansible.builtin.uri:
+    url: "{{ generic_api_url }}"
+    method: POST
+    headers: "{{ generic_api_headers }}"
     body_format: json
     body:
-      text: "{{ lightspeed_prompt }}"
+      model: "{{ generic_api_model }}"
+      messages:
+        - role: "user"
+          content: "{{ generation_prompt }}"
+      temperature: 0.2
     return_content: true
     status_code: 200
     timeout: 180
-  register: lightspeed_response
+  register: generic_api_response
 
-- name: Display Code Assistant generation results
+- name: Display API generation results
   ansible.builtin.debug:
     msg:
-      - "Code Assistant Playbook Generation (Lightspeed):"
-      - "Status: {{ 'Success' if lightspeed_response.status == 200 else 'Failed' }}"
-      - "Playbook Length: {{ lightspeed_response.json.playbook | default(lightspeed_response.json.content | default('')) | length }} chars"
+      - "Generic API Playbook Generation:"
+      - "Status: {{ 'Success' if generic_api_response.status == 200 else 'Failed' }}"
+      - "Model: {{ generic_api_model }}"
 
-- name: Extract and validate generated playbook
+- name: Extract generated playbook content
   ansible.builtin.set_fact:
-    playbook_content: "{{ lightspeed_response.json.playbook | default(lightspeed_response.json.content | default('')) }}"
+    raw_content: "{{ generic_api_response.json.choices[0].message.content }}"
+
+- name: Strip markdown code fences if present
+  ansible.builtin.set_fact:
+    playbook_content: >-
+      {{ raw_content | regex_replace('(?s)^```(yaml|yml|ansible)?\n', '') | regex_replace('\n```\s*$', '') }}
 
 - name: Validate generated playbook structure
   ansible.builtin.assert:
@@ -65,5 +86,5 @@
 - name: Set generation results
   ansible.builtin.set_fact:
     ai_generation_completed: true
-    ai_backend_used: "lightspeed"
+    ai_backend_used: "generic_api"
     ai_playbook_filename: "{{ playbook_filename }}"

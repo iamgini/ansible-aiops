@@ -189,7 +189,7 @@ Event: disk_alert from monitoring_system
 You can run the playbook directly for testing:
 
 ```bash
-ansible-playbook playbooks/find-matching-job-template.yml \
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
   -e "event_type=disk_alert" \
   -e "event_service=nginx" \
   -e "event_hostname=web-server-01" \
@@ -289,7 +289,7 @@ images:
 
 ```bash
 # Test MCP server connectivity
-ansible-playbook playbooks/find-matching-job-template.yml -vvv
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout -vvv
 
 # Check MCP tools available
 ansible -m ansible.mcp.tools_info \

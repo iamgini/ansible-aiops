@@ -5,7 +5,7 @@
 #   1. Query AAP via MCP → Launch job if found
 #   2. Generate playbook with AI → Commit to git
 #
-# AI Backends: "lightspeed" (default) or "coder"
+# AI Backends: "lightspeed" (default), "generic_api", or "coder"
 # See: docs/MODULAR-ARCHITECTURE.md
 
 - name: Intelligent AIOps Workflow
@@ -53,6 +53,20 @@
         ai_backend: "{{ ai_backend }}"
       when: not mcp_completed
 
+    - name: Execute CaC Manager to create JT and Workflow in AAP
+      ansible.builtin.include_role:
+        name: aiops_cac_manager
+      vars:
+        event_type: "{{ event_type }}"
+        event_description: "{{ event_description }}"
+        event_host: "{{ event_host }}"
+        event_severity: "{{ event_severity }}"
+        event_service: "{{ event_service | default('') }}"
+      when:
+        - not mcp_completed
+        - ai_generation_completed | default(false)
+        - ai_git_pushed | default(false)
+
     - name: Workflow Summary
       ansible.builtin.debug:
         msg:
@@ -60,7 +74,10 @@
           - "✅ Intelligent AIOps Workflow Complete!"
           - "=========================================="
           - "Workflow Path: {{ 'MCP → AAP Job Launch' if mcp_completed else 'AI Generation (' + ai_backend + ') → Git Push' }}"
-          - "{{ 'AAP Job Template: ' + mcp_template_name if mcp_completed else 'Generated Playbook: playbooks/' + ai_playbook_filename }}"
+          - "{{ 'AAP Job Template: ' + mcp_template_name if mcp_completed else 'Generated Playbook: ' + git_playbook_dir + '/' + ai_playbook_filename }}"
           - "{{ 'MCP Score: ' + (mcp_score | string) if mcp_completed else 'AI Backend: ' + ai_backend_used }}"
           - "{{ 'Job ID: ' + (mcp_job_id | string) if mcp_completed else 'Git Pushed: ' + (ai_git_pushed | string) }}"
+          - "{{ '' if mcp_completed else 'Review Branch: ' + (ai_git_review_branch | default('N/A')) }}"
+          - "{{ '' if mcp_completed else 'CaC JT: ' + (cac_jt_name | default('N/A')) }}"
+          - "{{ '' if mcp_completed else 'CaC WF: ' + (cac_wf_name | default('N/A')) }}"
           - "=========================================="

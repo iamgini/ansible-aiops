@@ -135,10 +135,10 @@ lightspeed_response.json.playbook  # or .content
 
 ### ✅ Syntax Checks Passed
 ```bash
-ansible-playbook playbooks/intelligent-aiops-workflow.yml --syntax-check
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout --syntax-check
 # playbook: playbooks/intelligent-aiops-workflow.yml ✅
 
-ansible-playbook generate-and-push.yml --syntax-check
+ansible-navigator run generate-and-push.yml -m stdout --syntax-check
 # playbook: generate-and-push.yml ✅
 ```
 
@@ -174,7 +174,7 @@ Based on https://ansible-tmm.github.io/solution-guides/README-AIOps.html, docume
 
 2. **Direct Playbook Test:**
    ```bash
-   ansible-playbook playbooks/intelligent-aiops-workflow.yml \
+   ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
      -e "event_type=disk_alert" \
      -e "event_description='Disk usage at 95%'" \
      -e "event_host=test-server-01" \

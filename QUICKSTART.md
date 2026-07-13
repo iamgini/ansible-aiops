@@ -65,7 +65,7 @@ If successful, you'll see:
 Find matching templates for a specific event:
 
 ```bash
-ansible-playbook playbooks/find-matching-job-template.yml \
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
   -e "event_type=disk_alert" \
   -e "event_service=nginx" \
   -e "event_hostname=web-server-01" \
@@ -129,13 +129,13 @@ The rulebook will:
 
 ```bash
 # Disk space alert
-ansible-playbook playbooks/find-matching-job-template.yml \
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
   -e "event_type=disk_full" \
   -e "event_hostname=db-server-01" \
   -e "event_severity=critical"
 
 # High CPU usage
-ansible-playbook playbooks/find-matching-job-template.yml \
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
   -e "event_type=high_cpu" \
   -e "event_hostname=app-server-03" \
   -e "event_severity=high"
@@ -145,14 +145,14 @@ ansible-playbook playbooks/find-matching-job-template.yml \
 
 ```bash
 # Service down
-ansible-playbook playbooks/find-matching-job-template.yml \
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
   -e "event_type=service_down" \
   -e "event_service=postgresql" \
   -e "event_hostname=db-primary-01" \
   -e "event_severity=critical"
 
 # Slow response time
-ansible-playbook playbooks/find-matching-job-template.yml \
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
   -e "event_type=slow_response" \
   -e "event_service=api" \
   -e 'event_tags=["backend","production"]'
@@ -162,7 +162,7 @@ ansible-playbook playbooks/find-matching-job-template.yml \
 
 ```bash
 # Security breach detected
-ansible-playbook playbooks/find-matching-job-template.yml \
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
   -e "event_type=security_breach" \
   -e "event_service=firewall" \
   -e "event_severity=critical" \
@@ -279,7 +279,7 @@ Add to the playbook:
 
 For issues or questions:
 1. Check the troubleshooting section above
-2. Review logs: `ansible-playbook ... -vvv`
+2. Review logs: `ansible-navigator run ... -m stdout -vvv`
 3. Open an issue on the project repository
 4. Ask on Ansible Forum
 

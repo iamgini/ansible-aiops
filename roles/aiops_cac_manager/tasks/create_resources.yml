@@ -1,0 +1,80 @@
+---
+# Render Jinja2 templates and apply CaC configuration to AAP
+# Uses infra.aap_configuration.dispatch role (same as ansible-aap-cac)
+
+- name: Create temp directory for rendered CaC templates
+  ansible.builtin.file:
+    path: "{{ aap_cac_temp_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Render project template
+  ansible.builtin.template:
+    src: project.yml.j2
+    dest: "{{ aap_cac_temp_dir }}/project.yml"
+    mode: '0644'
+
+- name: Render job template definition
+  ansible.builtin.template:
+    src: job_template.yml.j2
+    dest: "{{ aap_cac_temp_dir }}/job_template.yml"
+    mode: '0644'
+
+- name: Render workflow template definition
+  ansible.builtin.template:
+    src: workflow_template.yml.j2
+    dest: "{{ aap_cac_temp_dir }}/workflow_template.yml"
+    mode: '0644'
+
+- name: Load rendered project definition
+  ansible.builtin.include_vars:
+    file: "{{ aap_cac_temp_dir }}/project.yml"
+    name: rendered_project
+
+- name: Load rendered job template definition
+  ansible.builtin.include_vars:
+    file: "{{ aap_cac_temp_dir }}/job_template.yml"
+    name: rendered_jt
+
+- name: Load rendered workflow template definition
+  ansible.builtin.include_vars:
+    file: "{{ aap_cac_temp_dir }}/workflow_template.yml"
+    name: rendered_wf
+
+- name: Set controller variables for dispatch
+  ansible.builtin.set_fact:
+    controller_projects: "{{ rendered_project.controller_projects }}"
+    controller_templates: "{{ rendered_jt.controller_templates }}"
+    controller_workflows: "{{ rendered_wf.controller_workflows }}"
+    controller_hostname: "{{ aap_hostname }}"
+    controller_validate_certs: "{{ aap_validate_certs }}"
+
+- name: Sync project to pick up merged playbook
+  ansible.builtin.include_role:
+    name: infra.aap_configuration.dispatch
+  vars:
+    controller_configuration_dispatcher_roles:
+      - { role: projects, var: controller_projects, tags: projects }
+  when: aap_sync_project | bool
+
+- name: Create job template in AAP
+  ansible.builtin.include_role:
+    name: infra.aap_configuration.dispatch
+  vars:
+    controller_configuration_dispatcher_roles:
+      - { role: job_templates, var: controller_templates, tags: job_templates }
+
+- name: Create workflow template in AAP
+  ansible.builtin.include_role:
+    name: infra.aap_configuration.dispatch
+  vars:
+    controller_configuration_dispatcher_roles:
+      - { role: workflow_job_templates, var: controller_workflows, tags: workflow_job_templates }
+
+- name: Display created resources
+  ansible.builtin.debug:
+    msg:
+      - "AAP resources created successfully:"
+      - "  Project: {{ controller_projects[0].name }}"
+      - "  Job Template: {{ controller_templates[0].name }}"
+      - "  Workflow: {{ controller_workflows[0].name }}"

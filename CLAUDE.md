@@ -90,7 +90,7 @@ cp .env.example .env
 ./test-mcp-integration.sh
 
 # Manual playbook execution with sample event
-ansible-playbook playbooks/find-matching-job-template.yml \
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
   -e "event_type=disk_alert" \
   -e "event_service=nginx" \
   -e "event_hostname=web-server-01" \
@@ -127,13 +127,13 @@ curl -X POST http://localhost:5000/webhook \
 
 ```bash
 # Generate playbook using Code Assistant
-ansible-playbook generate-and-push.yml \
+ansible-navigator run generate-and-push.yml -m stdout \
   -e "event_type=high_cpu" \
   -e "event_description='CPU at 98%'" \
   -e "target_host=app-server-01"
 
 # Skip Git push (local only)
-ansible-playbook generate-and-push.yml --skip-tags git
+ansible-navigator run generate-and-push.yml -m stdout --skip-tags git
 ```
 
 ## Project Structure
@@ -198,7 +198,7 @@ Edit `playbooks/find-matching-job-template.yml`, find the "Score and rank" task:
 
 Test changes:
 ```bash
-ansible-playbook playbooks/find-matching-job-template.yml -e "event_type=test" -vv
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout -e "event_type=test" -vv
 ```
 
 ### Adding New EDA Rules
@@ -357,13 +357,13 @@ Example safe auto-launch:
 
 ```bash
 # Syntax check
-ansible-playbook playbooks/find-matching-job-template.yml --syntax-check
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout --syntax-check
 
 # Check mode (won't actually query AAP)
-ansible-playbook playbooks/find-matching-job-template.yml --check
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout --check
 
 # Verbose output for debugging
-ansible-playbook playbooks/find-matching-job-template.yml -vvv
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout -vvv
 ```
 
 ### Integration Testing

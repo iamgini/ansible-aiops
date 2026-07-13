@@ -2,17 +2,27 @@
 # Default variables for aiops_playbook_generator role
 
 # AI Backend Selection
-ai_backend: "lightspeed"  # Options: "lightspeed" (default) or "coder"
+ai_backend: "lightspeed"  # Options: "lightspeed" (default), "generic_api", or "coder"
 
-# Common Configuration
-git_remote_url: "{{ lookup('env', 'GIT_REMOTE_URL') | default('https://github.com/user/repo.git', true) }}"
+# Git Repository Configuration
+git_remote_url: "{{ lookup('env', 'GIT_REMOTE_URL') | default('https://github.com/iamgini/ansible-ai-generated-playbooks.git', true) }}"
 git_token: "{{ lookup('env', 'GIT_TOKEN') | default('', true) }}"
 git_username: "{{ lookup('env', 'GIT_USERNAME') | default('aiops-bot', true) }}"
 git_email: "{{ lookup('env', 'GIT_EMAIL') | default('aiops@example.com', true) }}"
+git_default_branch: "{{ lookup('env', 'GIT_DEFAULT_BRANCH') | default('main', true) }}"
+git_review_branch_prefix: "{{ lookup('env', 'GIT_REVIEW_BRANCH_PREFIX') | default('aiops_review', true) }}"
+git_playbook_dir: "{{ lookup('env', 'GIT_PLAYBOOK_DIR') | default('playbooks', true) }}"
+git_commit_author: "{{ lookup('env', 'GIT_COMMIT_AUTHOR') | default('AIOps Playbook Generator', true) }}"
+git_ssl_verify: "{{ lookup('env', 'GIT_SSL_VERIFY') | default('true', true) }}"
 
 # Lightspeed/API Backend Configuration
 lightspeed_url: "{{ lookup('env', 'LIGHTSPEED_URL') | default('http://localhost:8000/api/v0/ai/generations/', true) }}"
 lightspeed_token: "{{ lookup('env', 'LIGHTSPEED_TOKEN') | default(lookup('env', 'AAP_BEARER_TOKEN'), true) }}"
+
+# Generic API Backend Configuration (OpenAI-compatible)
+generic_api_url: "{{ lookup('env', 'GENERIC_API_URL') | default('http://localhost:11434/v1/chat/completions', true) }}"
+generic_api_token: "{{ lookup('env', 'GENERIC_API_TOKEN') | default('', true) }}"
+generic_api_model: "{{ lookup('env', 'GENERIC_API_MODEL') | default('gpt-4', true) }}"
 
 # Coder Backend Configuration
 coder_url: "{{ lookup('env', 'CODER_URL') | default('https://coder.example.com', true) }}"

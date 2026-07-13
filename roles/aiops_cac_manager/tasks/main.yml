@@ -1,0 +1,69 @@
+---
+# Role: aiops_cac_manager
+# Dynamically creates AAP Job Templates and Workflow Templates for AI-generated playbooks
+# Uses infra.aap_configuration.dispatch with CaC-compatible Jinja2 templates
+
+- name: Display CaC Manager configuration
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "AIOps CaC Manager"
+      - "=========================================="
+      - "AAP Host: {{ aap_hostname }}"
+      - "Organization: {{ aap_organization }}"
+      - "Project: {{ aap_project }}"
+      - "Playbook: {{ git_playbook_dir }}/{{ ai_playbook_filename }}"
+      - "Event: {{ event_type }} on {{ event_host }}"
+      - "Auto-launch: {{ aap_auto_launch_workflow }}"
+      - "=========================================="
+
+- name: Validate required input variables
+  ansible.builtin.assert:
+    that:
+      - ai_playbook_filename is defined
+      - ai_playbook_filename | length > 0
+      - event_type is defined
+      - event_host is defined
+      - aap_hostname is defined
+      - aap_password | length > 0
+    fail_msg: "Missing required variables for CaC Manager"
+
+- name: Authenticate to AAP
+  ansible.builtin.include_tasks: authenticate.yml
+
+- name: Create AAP resources from templates
+  ansible.builtin.include_tasks: create_resources.yml
+
+- name: Launch workflow
+  ansible.builtin.include_tasks: launch_workflow.yml
+  when: aap_auto_launch_workflow | bool
+
+- name: Clean up OAuth2 token
+  ansible.builtin.uri:
+    url: "{{ aap_hostname }}{{ aap_oauthtoken_url }}"
+    user: "{{ aap_username }}"
+    password: "{{ aap_password }}"
+    method: DELETE
+    force_basic_auth: true
+    validate_certs: "{{ aap_validate_certs }}"
+    status_code: 204
+  when: aap_oauthtoken_url is defined
+
+- name: Clean up temp CaC directory
+  ansible.builtin.file:
+    path: "{{ aap_cac_temp_dir }}"
+    state: absent
+
+- name: Set CaC Manager results
+  ansible.builtin.set_fact:
+    cac_completed: true
+    cac_jt_name: "{{ aap_jt_prefix }}-{{ event_type }}-{{ event_host | regex_replace('\\.', '-') }}"
+    cac_wf_name: "{{ aap_wf_prefix }}-{{ event_type }}-{{ event_host | regex_replace('\\.', '-') }}"
+
+- name: Display CaC Manager completion status
+  ansible.builtin.debug:
+    msg:
+      - "AIOps CaC Manager Complete"
+      - "Job Template: {{ cac_jt_name }}"
+      - "Workflow: {{ cac_wf_name }}"
+      - "Auto-launched: {{ aap_auto_launch_workflow | bool }}"

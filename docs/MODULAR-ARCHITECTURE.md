@@ -166,7 +166,7 @@ git_remote_url: "https://github.com/org/repo.git"
 ### Basic Usage (Default: Lightspeed Backend)
 
 ```bash
-ansible-playbook playbooks/intelligent-aiops-workflow.yml \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=disk_alert" \
   -e "event_description='Disk usage at 95% on /var'" \
   -e "event_host=web-server-01" \
@@ -189,7 +189,7 @@ export GIT_TOKEN="ghp_your_github_token"
 export AI_BACKEND="coder"
 
 # Or pass as extra var
-ansible-playbook playbooks/intelligent-aiops-workflow.yml \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=disk_alert" \
   -e "event_description='Disk usage at 95%'" \
   -e "event_host=web-server-01" \
@@ -209,7 +209,7 @@ export GIT_TOKEN="ghp_your_github_token"
 
 ```bash
 # Skip MCP query by setting empty URL
-ansible-playbook playbooks/intelligent-aiops-workflow.yml \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=test" \
   -e "event_description='Test AI generation'" \
   -e "event_host=localhost" \
@@ -433,7 +433,7 @@ To add a new AI backend (e.g., "ollama", "openai"):
 5. **Document usage**:
    ```bash
    export AI_BACKEND="ollama"
-   ansible-playbook playbooks/intelligent-aiops-workflow.yml \
+   ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
      -e "ai_backend=ollama" \
      -e "event_type=test" \
      ...
@@ -506,7 +506,7 @@ ERROR! Invalid ai_backend: unknown. Must be 'lightspeed' or 'coder'
 ```bash
 export AI_BACKEND="lightspeed"
 # or
-ansible-playbook ... -e "ai_backend=coder"
+ansible-navigator run ... -m stdout -e "ai_backend=coder"
 ```
 
 ### Role variables undefined
@@ -517,7 +517,7 @@ ERROR! 'event_type' is undefined
 
 **Solution**: Pass required variables to playbook:
 ```bash
-ansible-playbook playbooks/intelligent-aiops-workflow.yml \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=disk_alert" \
   -e "event_description='Disk full'" \
   -e "event_host=server-01" \
@@ -542,7 +542,7 @@ cat > test_mcp_matcher.yml <<EOF
         event_severity: "low"
 EOF
 
-ansible-playbook test_mcp_matcher.yml
+ansible-navigator run test_mcp_matcher.yml -m stdout
 ```
 
 ### Test AI Generator Role Independently
@@ -562,7 +562,7 @@ cat > test_ai_generator.yml <<EOF
         ai_backend: "lightspeed"
 EOF
 
-ansible-playbook test_ai_generator.yml
+ansible-navigator run test_ai_generator.yml -m stdout
 ```
 
 ## Future Enhancements

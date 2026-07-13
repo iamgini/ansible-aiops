@@ -432,4 +432,4 @@ curl -X POST https://your-eda-controller:5000/webhook \
 Event → EDA Webhook → Rulebook Match → AAP Job Template Launch → Remediation
 ```
 
-No local ansible-playbook execution - everything runs in AAP! 🎉
+No local ansible-playbook execution needed - everything runs in AAP! 🎉

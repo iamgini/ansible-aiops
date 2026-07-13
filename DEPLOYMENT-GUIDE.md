@@ -83,7 +83,7 @@ This deployment integrates with:
 ### 3. No Local Execution Needed
 
 ❌ **NOT required:**
-- Local ansible-playbook execution
+- Local ansible-navigator execution
 - Local ansible-rulebook execution  
 - Local Python environment
 - Local collection installation
@@ -99,18 +99,15 @@ This deployment integrates with:
 In your git repository:
 
 ```bash
-# Create playbooks directory
-mkdir -p playbooks/remediation
-
 # Create 4 remediation playbooks
 # (See AAP-JOB-TEMPLATES-SETUP.md for examples)
-vim playbooks/remediation/disk-cleanup.yml
-vim playbooks/remediation/restart-service.yml
-vim playbooks/remediation/investigate-cpu.yml
-vim playbooks/remediation/renew-certificate.yml
+vim playbooks/remediation_disk-cleanup.yml
+vim playbooks/remediation_restart-service.yml
+vim playbooks/remediation_investigate-cpu.yml
+vim playbooks/remediation_renew-certificate.yml
 
 # Commit and push
-git add playbooks/remediation/
+git add playbooks/remediation_*.yml
 git commit -m "Add remediation playbooks for Cases 1-4"
 git push
 ```
@@ -134,7 +131,7 @@ For each template, **AAP UI → Templates → Add → Job Template:**
 - Job Type: `Run`
 - Inventory: `Production Linux`
 - Project: `Remediation Playbooks`
-- Playbook: `playbooks/remediation/disk-cleanup.yml`
+- Playbook: `playbooks/remediation_disk-cleanup.yml`
 - Credentials: `Machine Credential`
 - Prompt on Launch: `Limit`, `Extra Variables`
 

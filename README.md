@@ -54,32 +54,38 @@ This project can work with multiple AI backends for playbook generation:
 - **[redhat.ai Collection](https://console.redhat.com/ansible/automation-hub/)** - Optional AI model serving for incident analysis
 - **[ansible.scm Collection](https://console.redhat.com/ansible/automation-hub/)** - Git operations for playbook commits
 
-## Key Collections
+## Prerequisites
 
-| Collection | Purpose | Status |
-|------------|---------|--------|
-| `ansible.eda` | Event sources and rulebook engine | ✅ Required |
-| `ansible.mcp` | MCP client for AAP integration | ✅ Required |
-| `ansible.controller` | AAP configuration as code | ✅ Required |
-| `ansible.scm` | Git commit automation | ✅ Required |
-| `redhat.ai` | AI model serving (optional) | ⚠️ Optional |
+### Collections
 
-## Setup
+| Collection | Version | Purpose | Required |
+|------------|---------|---------|----------|
+| `ansible.eda` | >=1.0.0 | Event sources and rulebook engine | Yes |
+| `ansible.mcp` | >=1.0.0 | MCP client for AAP integration | Yes |
+| `ansible.utils` | >=2.0.0 | Utility functions (dependency of ansible.mcp) | Yes |
+| `ansible.controller` | >=4.5.0 | AAP controller modules (JT launch, config) | Yes |
+| `awx.awx` | >=23.0.0 | AWX/AAP job launching | Yes |
+| `infra.aap_configuration` | >=2.0.0 | CaC roles for dynamic JT/WF creation | Yes |
+| `ansible.platform` | >=1.0.0 | AAP platform integration | Optional |
 
-### 1. Install Dependencies
+### Platform Requirements
 
-**Install required Ansible collections:**
+| Component | Version | Notes |
+|-----------|---------|-------|
+| Ansible Core | >=2.16 | Required for EDA features |
+| Python | >=3.10 | Required for ansible.mcp collection |
+| AAP | >=2.6.4 | Required for MCP server support |
+| AAP MCP Server | latest | Separate service, see [aap-mcp-server](https://github.com/ansible/aap-mcp-server) |
+
+### Install Collections
+
 ```bash
 ansible-galaxy collection install -r requirements.yml
 ```
 
-**Required collections:**
-- `ansible.mcp` - MCP client for AAP integration
-- `ansible.utils` - Utility functions
-- `ansible.eda` - Event-driven automation
-- `ansible.controller` - AAP controller interaction
+## Setup
 
-### 2. Configure Environment
+### 1. Configure Environment
 
 **Copy and configure environment file:**
 ```bash
@@ -97,7 +103,7 @@ export AAP_BEARER_TOKEN="your_aap_bearer_token_here"
 export GIT_TOKEN="ghp_your_github_token_here"
 ```
 
-### 3. Configure AAP MCP Server
+### 2. Configure AAP MCP Server
 
 See the [AAP MCP Server documentation](https://github.com/ansible/aap-mcp-server) for installation and configuration.
 
@@ -116,12 +122,12 @@ See the [AAP MCP Server documentation](https://github.com/ansible/aap-mcp-server
 
 **Generate playbook using Maya:**
 ```bash
-ansible-playbook generate-and-push.yml
+ansible-navigator run generate-and-push.yml -m stdout
 ```
 
 **With custom event (override variables):**
 ```bash
-ansible-playbook generate-and-push.yml \
+ansible-navigator run generate-and-push.yml -m stdout \
   -e "event_type=high_cpu" \
   -e "event_description='CPU at 98%'" \
   -e "target_host=app-server-01"
@@ -129,14 +135,14 @@ ansible-playbook generate-and-push.yml \
 
 **Skip Git push (local only):**
 ```bash
-ansible-playbook generate-and-push.yml --skip-tags git
+ansible-navigator run generate-and-push.yml -m stdout --skip-tags git
 ```
 
 ### MCP-Based Job Template Matching
 
 **Find matching job templates for an event:**
 ```bash
-ansible-playbook playbooks/find-matching-job-template.yml \
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
   -e "event_type=disk_alert" \
   -e "event_service=nginx" \
   -e "event_hostname=web-server-01" \
@@ -239,7 +245,7 @@ generated-playbooks/
 
 **Disk full event:**
 ```bash
-ansible-playbook generate-and-push.yml \
+ansible-navigator run generate-and-push.yml -m stdout \
   -e "event_type=disk_full" \
   -e "event_description='Disk at 95% on /var/log'" \
   -e "target_host=web01.example.com"
@@ -247,7 +253,7 @@ ansible-playbook generate-and-push.yml \
 
 **Service down:**
 ```bash
-ansible-playbook generate-and-push.yml \
+ansible-navigator run generate-and-push.yml -m stdout \
   -e "event_type=service_down" \
   -e "event_description='Nginx service stopped'" \
   -e "target_host=lb01.example.com"
@@ -255,7 +261,7 @@ ansible-playbook generate-and-push.yml \
 
 **High CPU:**
 ```bash
-ansible-playbook generate-and-push.yml \
+ansible-navigator run generate-and-push.yml -m stdout \
   -e "event_type=high_cpu" \
   -e "event_description='CPU usage at 98%'" \
   -e "target_host=app-server-01"
@@ -265,7 +271,7 @@ ansible-playbook generate-and-push.yml \
 
 **Database performance issue:**
 ```bash
-ansible-playbook playbooks/find-matching-job-template.yml \
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
   -e "event_type=database_slow" \
   -e "event_service=postgresql" \
   -e "event_hostname=db-primary-01" \
@@ -275,7 +281,7 @@ ansible-playbook playbooks/find-matching-job-template.yml \
 
 **Security alert:**
 ```bash
-ansible-playbook playbooks/find-matching-job-template.yml \
+ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
   -e "event_type=security_breach" \
   -e "event_service=firewall" \
   -e "event_hostname=fw-01" \

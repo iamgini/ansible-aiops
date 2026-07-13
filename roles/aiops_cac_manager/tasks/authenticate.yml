@@ -1,0 +1,23 @@
+---
+# Authenticate to AAP and obtain OAuth2 token
+# Pattern from ansible-aap-cac/playbooks/configure-aap-using-filetree.yaml
+
+- name: Get AAP OAuth2 token
+  ansible.builtin.uri:
+    url: "{{ aap_hostname }}/api/gateway/v1/tokens/"
+    user: "{{ aap_username }}"
+    password: "{{ aap_password }}"
+    method: POST
+    force_basic_auth: true
+    validate_certs: "{{ aap_validate_certs }}"
+    status_code: 201
+  register: authtoken_res
+  when: aap_oauthtoken is not defined
+
+- name: Set OAuth token for subsequent requests
+  ansible.builtin.set_fact:
+    aap_oauthtoken: "{{ authtoken_res.json.token }}"
+    aap_oauthtoken_url: "{{ authtoken_res.json.url }}"
+    controller_oauthtoken: "{{ authtoken_res.json.token }}"
+  no_log: true
+  when: aap_oauthtoken is not defined
