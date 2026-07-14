@@ -20,9 +20,10 @@
     # CASE 1: High Disk Usage - Known Remediation
     # =========================================================================
     - name: High Disk Usage - Launch AAP Job Template
-      condition: >
-        event.payload.alert_name == "disk_usage_high" or
-        event.payload.event_type == "disk_full"
+      condition:
+        any:
+          - event.payload.alert_name == "disk_usage_high"
+          - event.payload.event_type == "disk_full"
       action:
         run_job_template:
           name: "Remediate Disk Space"
@@ -40,9 +41,10 @@
     # CASE 2: Service Down - Known Remediation
     # =========================================================================
     - name: Service Down - Launch AAP Job Template
-      condition: >
-        event.payload.alert_name == "service_down" or
-        event.payload.state == "down"
+      condition:
+        any:
+          - event.payload.alert_name == "service_down"
+          - event.payload.state == "down"
       action:
         run_job_template:
           name: "Restart Service"
@@ -59,9 +61,10 @@
     # CASE 3: High CPU Usage - Known Remediation
     # =========================================================================
     - name: High CPU Usage - Launch AAP Job Template
-      condition: >
-        event.payload.alert_name == "high_cpu" or
-        (event.payload.metric == "cpu" and event.payload.value | float > 80)
+      condition:
+        any:
+          - event.payload.alert_name == "high_cpu"
+          - event.payload.metric == "cpu" and event.payload.value | float > 80
       action:
         run_job_template:
           name: "Investigate High CPU"
@@ -79,9 +82,10 @@
     # CASE 4: Certificate Expiry - Known Remediation
     # =========================================================================
     - name: Certificate Expiry Warning - Launch AAP Job Template
-      condition: >
-        event.payload.alert_name == "certificate_expiry" or
-        event.payload.event_type == "cert_expiring"
+      condition:
+        any:
+          - event.payload.alert_name == "certificate_expiry"
+          - event.payload.event_type == "cert_expiring"
       action:
         run_job_template:
           name: "Renew SSL Certificate"

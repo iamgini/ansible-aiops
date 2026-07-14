@@ -4,6 +4,9 @@
 # AI Backend Selection
 ai_backend: "lightspeed"  # Options: "lightspeed" (default), "generic_api", or "coder"
 
+# Retry on validation failure (feed errors back to AI and regenerate)
+ai_max_retries: 3
+
 # Git Repository Configuration
 git_remote_url: "{{ lookup('env', 'GIT_REMOTE_URL') | default('https://github.com/iamgini/ansible-ai-generated-playbooks.git', true) }}"
 git_token: "{{ lookup('env', 'GIT_TOKEN') | default('', true) }}"

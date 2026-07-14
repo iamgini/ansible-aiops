@@ -2,20 +2,6 @@
 # Role: aiops_mcp_matcher
 # Query AAP via MCP to find matching job templates and launch if found
 
-- name: Display event context for MCP matching
-  ansible.builtin.debug:
-    msg:
-      - "=========================================="
-      - "MCP Matcher - Searching for Job Templates"
-      - "=========================================="
-      - "Event Type: {{ event_type }}"
-      - "Description: {{ event_description }}"
-      - "Host: {{ event_host }}"
-      - "Severity: {{ event_severity }}"
-      - "Service: {{ event_service | default('N/A') }}"
-      - "Tags: {{ event_tags | default([]) | join(', ') }}"
-      - "=========================================="
-
 - name: Skip MCP query if server URL not configured
   ansible.builtin.set_fact:
     mcp_completed: false
@@ -51,15 +37,6 @@
     - mcp_response is defined
     - mcp_response.status == 200
     - mcp_response.json.content[0].templates | length > 0
-
-- name: Display MCP matching results
-  ansible.builtin.debug:
-    msg:
-      - "MCP Search Results:"
-      - "Best Match: {{ best_match.name | default('None') }}"
-      - "Score: {{ best_match.score | default(0) }}"
-      - "Decision: {{ 'Launch AAP Job' if (best_match.score | default(0) >= mcp_confidence_threshold) else ('Try AI Generation' if (best_match.score | default(0) < mcp_minimum_score) else 'Manual Review Needed') }}"
-  when: best_match is defined
 
 - name: Launch AAP job template (high confidence match)
   awx.awx.job_launch:
@@ -99,9 +76,9 @@
     best_match is not defined or
     best_match.score < mcp_confidence_threshold
 
-- name: Display MCP role completion status
+- name: MCP Matcher Summary
   ansible.builtin.debug:
-    msg:
-      - "MCP Matcher Complete"
-      - "Status: {{ 'Job Launched' if mcp_completed else 'No Match - Proceed to AI Generation' }}"
-      - "{{ 'Template: ' + mcp_template_name + ' (Job ID: ' + (mcp_job_id | string) + ')' if mcp_completed else 'Next Step: AI Playbook Generation' }}"
+    msg: >-
+      {{ 'Matched: ' + mcp_template_name + ' (score=' + (mcp_score | string) + ', job=' + (mcp_job_id | string) + ')'
+         if mcp_completed else
+         'No match (score=' + (mcp_score | string) + ') → AI generation' }}

@@ -52,16 +52,28 @@
   failed_when: false
   when: ansiblelint_check.rc == 0
 
+- name: Collect validation errors
+  ansible.builtin.set_fact:
+    _validation_errors: >-
+      {% set errors = [] %}
+      {% if syntax_check_result.rc != 0 %}
+        {% set _ = errors.append('SYNTAX ERROR: ' + syntax_check_result.stderr | default(syntax_check_result.stdout | default(''))) %}
+      {% endif %}
+      {% if yamllint_check.rc == 0 and yamllint_result.rc != 0 %}
+        {% set _ = errors.append('YAMLLINT: ' + yamllint_result.stdout | default('')) %}
+      {% endif %}
+      {% if ansiblelint_check.rc == 0 and ansiblelint_result.rc != 0 %}
+        {% set _ = errors.append('ANSIBLE-LINT: ' + ansiblelint_result.stdout | default('')) %}
+      {% endif %}
+      {{ errors | join('\n') }}
+
 - name: Set validation results
   ansible.builtin.set_fact:
     ai_validation_syntax: "{{ syntax_check_result.rc == 0 }}"
     ai_validation_yamllint: "{{ yamllint_result.rc == 0 if yamllint_check.rc == 0 else 'skipped' }}"
     ai_validation_ansiblelint: "{{ ansiblelint_result.rc == 0 if ansiblelint_check.rc == 0 else 'skipped' }}"
-
-- name: Fail if syntax check failed
-  ansible.builtin.fail:
-    msg: "Generated playbook failed syntax check — not pushing to git. Error: {{ syntax_check_result.stderr }}"
-  when: syntax_check_result.rc != 0
+    ai_validation_passed: "{{ syntax_check_result.rc == 0 }}"
+    ai_validation_errors: "{{ _validation_errors | trim }}"
 
 - name: Clean up temp validation directory
   ansible.builtin.file:

@@ -22,6 +22,11 @@
       - Target the host: {{ event_host }}
       - Make the playbook idempotent
       - Return ONLY the YAML playbook content, no markdown fences or explanations
+      {% if ai_validation_errors | default('') | length > 0 %}
+
+      IMPORTANT: The previous attempt failed validation. Fix these errors:
+      {{ ai_validation_errors }}
+      {% endif %}
 
 - name: Build API request headers
   ansible.builtin.set_fact:
@@ -78,9 +83,10 @@
 
 - name: Push generated playbook to git
   ansible.builtin.include_tasks: git_push.yml
+  when: ai_validation_passed | bool
 
 - name: Set generation results
   ansible.builtin.set_fact:
-    ai_generation_completed: true
+    ai_generation_completed: "{{ ai_validation_passed | bool }}"
     ai_backend_used: "generic_api"
     ai_playbook_filename: "{{ playbook_filename }}"

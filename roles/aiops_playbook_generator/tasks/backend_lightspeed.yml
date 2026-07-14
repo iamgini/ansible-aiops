@@ -20,6 +20,11 @@
       - Use become: true where needed for privilege escalation
       - Target the host: {{ event_host }}
       - Make the playbook idempotent
+      {% if ai_validation_errors | default('') | length > 0 %}
+
+      IMPORTANT: The previous attempt failed validation. Fix these errors:
+      {{ ai_validation_errors }}
+      {% endif %}
 
 - name: Generate playbook with Red Hat Code Assistant API
   ansible.builtin.uri:
@@ -57,9 +62,10 @@
 
 - name: Push generated playbook to git
   ansible.builtin.include_tasks: git_push.yml
+  when: ai_validation_passed | bool
 
 - name: Set generation results
   ansible.builtin.set_fact:
-    ai_generation_completed: true
+    ai_generation_completed: "{{ ai_validation_passed | bool }}"
     ai_backend_used: "lightspeed"
     ai_playbook_filename: "{{ playbook_filename }}"

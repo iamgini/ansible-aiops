@@ -8,22 +8,24 @@
       - ai_backend in ['lightspeed', 'generic_api', 'coder']
     fail_msg: "Invalid ai_backend: {{ ai_backend }}. Must be 'lightspeed', 'generic_api', or 'coder'"
 
-- name: Include Lightspeed backend tasks
-  ansible.builtin.include_tasks: backend_lightspeed.yml
-  when: ai_backend == 'lightspeed'
+- name: Initialize retry state
+  ansible.builtin.set_fact:
+    ai_retry_count: 0
+    ai_validation_passed: false
+    ai_validation_errors: ""
 
-- name: Include Generic API backend tasks
-  ansible.builtin.include_tasks: backend_generic_api.yml
-  when: ai_backend == 'generic_api'
+- name: Generate playbook with validation retry
+  ansible.builtin.include_tasks: generate_with_retry.yml
 
-- name: Include Coder backend tasks
-  ansible.builtin.include_tasks: backend_coder.yml
-  when: ai_backend == 'coder'
+- name: Fail if all retries exhausted
+  ansible.builtin.fail:
+    msg: "AI generation failed after {{ ai_max_retries }} attempts. Last errors: {{ ai_validation_errors }}"
+  when: not (ai_validation_passed | bool)
 
 - name: AI Playbook Generator Summary
   ansible.builtin.debug:
     msg:
-      - "Backend: {{ ai_backend_used }} | Playbook: {{ git_playbook_dir }}/{{ ai_playbook_filename }}"
+      - "Backend: {{ ai_backend_used }} | Playbook: {{ git_playbook_dir }}/{{ ai_playbook_filename }} | Attempts: {{ ai_retry_count | int }}/{{ ai_max_retries }}"
       - "Validation: syntax={{ ai_validation_syntax | default('N/A') }} yamllint={{ ai_validation_yamllint | default('N/A') }} ansible-lint={{ ai_validation_ansiblelint | default('N/A') }}"
       - "Git: pushed={{ ai_git_pushed }} branch={{ ai_git_review_branch | default('N/A') }} repo={{ git_remote_url }}"
       - "{{ 'Workspace: ' + ai_workspace_name if ai_backend_used == 'coder' else '' }}"
