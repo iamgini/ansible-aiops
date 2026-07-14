@@ -64,7 +64,7 @@
       condition:
         any:
           - event.payload.alert_name == "high_cpu"
-          - event.payload.metric == "cpu" and event.payload.value | float > 80
+          - event.payload.metric == "cpu" and event.payload.value > 80
       action:
         run_job_template:
           name: "Investigate High CPU"
