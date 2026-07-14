@@ -52,13 +52,6 @@
     timeout: 180
   register: generic_api_response
 
-- name: Display API generation results
-  ansible.builtin.debug:
-    msg:
-      - "Generic API Playbook Generation:"
-      - "Status: {{ 'Success' if generic_api_response.status == 200 else 'Failed' }}"
-      - "Model: {{ generic_api_model }}"
-
 - name: Extract generated playbook content
   ansible.builtin.set_fact:
     raw_content: "{{ generic_api_response.json.choices[0].message.content }}"
@@ -79,6 +72,9 @@
 - name: Generate playbook filename
   ansible.builtin.set_fact:
     playbook_filename: "{{ event_type }}_{{ event_host | regex_replace('\\.', '_') }}.yml"
+
+- name: Validate generated playbook
+  ansible.builtin.include_tasks: validate_playbook.yml
 
 - name: Push generated playbook to git
   ansible.builtin.include_tasks: git_push.yml

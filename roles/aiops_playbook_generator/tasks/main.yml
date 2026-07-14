@@ -2,19 +2,6 @@
 # Role: aiops_playbook_generator
 # Generate Ansible playbooks using AI (pluggable backend: Lightspeed, Generic API, or Coder)
 
-- name: Display AI backend selection
-  ansible.builtin.debug:
-    msg:
-      - "=========================================="
-      - "AI Playbook Generator"
-      - "=========================================="
-      - "Backend: {{ ai_backend }}"
-      - "Event Type: {{ event_type }}"
-      - "Description: {{ event_description }}"
-      - "Host: {{ event_host }}"
-      - "Severity: {{ event_severity }}"
-      - "=========================================="
-
 - name: Validate AI backend selection
   ansible.builtin.assert:
     that:
@@ -33,13 +20,10 @@
   ansible.builtin.include_tasks: backend_coder.yml
   when: ai_backend == 'coder'
 
-- name: Display generation completion status
+- name: AI Playbook Generator Summary
   ansible.builtin.debug:
     msg:
-      - "AI Playbook Generator Complete"
-      - "Backend: {{ ai_backend_used }}"
-      - "Generated: {{ git_playbook_dir }}/{{ ai_playbook_filename }}"
-      - "Git Pushed: {{ ai_git_pushed }}"
-      - "Review Branch: {{ ai_git_review_branch | default('N/A') }}"
-      - "Repository: {{ git_remote_url }}"
+      - "Backend: {{ ai_backend_used }} | Playbook: {{ git_playbook_dir }}/{{ ai_playbook_filename }}"
+      - "Validation: syntax={{ ai_validation_syntax | default('N/A') }} yamllint={{ ai_validation_yamllint | default('N/A') }} ansible-lint={{ ai_validation_ansiblelint | default('N/A') }}"
+      - "Git: pushed={{ ai_git_pushed }} branch={{ ai_git_review_branch | default('N/A') }} repo={{ git_remote_url }}"
       - "{{ 'Workspace: ' + ai_workspace_name if ai_backend_used == 'coder' else '' }}"

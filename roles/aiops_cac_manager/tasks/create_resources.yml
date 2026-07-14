@@ -71,10 +71,3 @@
     controller_configuration_dispatcher_roles:
       - { role: workflow_job_templates, var: controller_workflows, tags: workflow_job_templates }
 
-- name: Display created resources
-  ansible.builtin.debug:
-    msg:
-      - "AAP resources created successfully:"
-      - "  Project: {{ controller_projects[0].name }}"
-      - "  Job Template: {{ controller_templates[0].name }}"
-      - "  Workflow: {{ controller_workflows[0].name }}"

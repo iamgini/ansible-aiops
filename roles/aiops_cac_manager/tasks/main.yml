@@ -3,20 +3,6 @@
 # Dynamically creates AAP Job Templates and Workflow Templates for AI-generated playbooks
 # Uses infra.aap_configuration.dispatch with CaC-compatible Jinja2 templates
 
-- name: Display CaC Manager configuration
-  ansible.builtin.debug:
-    msg:
-      - "=========================================="
-      - "AIOps CaC Manager"
-      - "=========================================="
-      - "AAP Host: {{ aap_hostname }}"
-      - "Organization: {{ aap_organization }}"
-      - "Project: {{ aap_project }}"
-      - "Playbook: {{ git_playbook_dir }}/{{ ai_playbook_filename }}"
-      - "Event: {{ event_type }} on {{ event_host }}"
-      - "Auto-launch: {{ aap_auto_launch_workflow }}"
-      - "=========================================="
-
 - name: Validate required input variables
   ansible.builtin.assert:
     that:
@@ -60,10 +46,6 @@
     cac_jt_name: "{{ aap_jt_prefix }}-{{ event_type }}-{{ event_host | regex_replace('\\.', '-') }}"
     cac_wf_name: "{{ aap_wf_prefix }}-{{ event_type }}-{{ event_host | regex_replace('\\.', '-') }}"
 
-- name: Display CaC Manager completion status
+- name: CaC Manager Summary
   ansible.builtin.debug:
-    msg:
-      - "AIOps CaC Manager Complete"
-      - "Job Template: {{ cac_jt_name }}"
-      - "Workflow: {{ cac_wf_name }}"
-      - "Auto-launched: {{ aap_auto_launch_workflow | bool }}"
+    msg: "JT: {{ cac_jt_name }} | WF: {{ cac_wf_name }} | Launched: {{ aap_auto_launch_workflow | bool }}"

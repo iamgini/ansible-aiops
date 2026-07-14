@@ -1,0 +1,69 @@
+---
+# Validate AI-generated playbook: YAML lint, syntax check, ansible-lint
+# Requires: playbook_content, playbook_filename
+# Runs inside EE container — tools may or may not be available
+
+- name: Create temp directory for validation
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: aiops-validate-
+  register: validate_temp_dir
+
+- name: Write playbook to temp file for validation
+  ansible.builtin.copy:
+    content: "{{ playbook_content }}"
+    dest: "{{ validate_temp_dir.path }}/{{ playbook_filename }}"
+    mode: '0644'
+
+- name: Check if yamllint is available
+  ansible.builtin.command:
+    cmd: yamllint --version
+  register: yamllint_check
+  changed_when: false
+  failed_when: false
+
+- name: Run yamllint on generated playbook
+  ansible.builtin.command:
+    cmd: "yamllint -d relaxed {{ validate_temp_dir.path }}/{{ playbook_filename }}"
+  register: yamllint_result
+  changed_when: false
+  failed_when: false
+  when: yamllint_check.rc == 0
+
+- name: Run ansible-playbook syntax check
+  ansible.builtin.command:
+    cmd: "ansible-playbook {{ validate_temp_dir.path }}/{{ playbook_filename }} --syntax-check"
+  register: syntax_check_result
+  changed_when: false
+  failed_when: false
+
+- name: Check if ansible-lint is available
+  ansible.builtin.command:
+    cmd: ansible-lint --version
+  register: ansiblelint_check
+  changed_when: false
+  failed_when: false
+
+- name: Run ansible-lint on generated playbook
+  ansible.builtin.command:
+    cmd: "ansible-lint -x yaml {{ validate_temp_dir.path }}/{{ playbook_filename }}"
+  register: ansiblelint_result
+  changed_when: false
+  failed_when: false
+  when: ansiblelint_check.rc == 0
+
+- name: Set validation results
+  ansible.builtin.set_fact:
+    ai_validation_syntax: "{{ syntax_check_result.rc == 0 }}"
+    ai_validation_yamllint: "{{ yamllint_result.rc == 0 if yamllint_check.rc == 0 else 'skipped' }}"
+    ai_validation_ansiblelint: "{{ ansiblelint_result.rc == 0 if ansiblelint_check.rc == 0 else 'skipped' }}"
+
+- name: Fail if syntax check failed
+  ansible.builtin.fail:
+    msg: "Generated playbook failed syntax check — not pushing to git. Error: {{ syntax_check_result.stderr }}"
+  when: syntax_check_result.rc != 0
+
+- name: Clean up temp validation directory
+  ansible.builtin.file:
+    path: "{{ validate_temp_dir.path }}"
+    state: absent

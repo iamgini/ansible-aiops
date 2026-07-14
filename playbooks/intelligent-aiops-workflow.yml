@@ -16,19 +16,6 @@
     ai_backend: "{{ lookup('env', 'AI_BACKEND') | default('lightspeed', true) }}"
 
   tasks:
-    - name: Display workflow initiation
-      ansible.builtin.debug:
-        msg:
-          - "=========================================="
-          - "Intelligent AIOps Workflow"
-          - "=========================================="
-          - "Event Type: {{ event_type }}"
-          - "Description: {{ event_description }}"
-          - "Host: {{ event_host }}"
-          - "Severity: {{ event_severity }}"
-          - "AI Backend: {{ ai_backend }}"
-          - "=========================================="
-
     - name: Execute MCP matcher role
       ansible.builtin.include_role:
         name: aiops_mcp_matcher
@@ -69,15 +56,10 @@
 
     - name: Workflow Summary
       ansible.builtin.debug:
-        msg:
-          - "=========================================="
-          - "✅ Intelligent AIOps Workflow Complete!"
-          - "=========================================="
-          - "Workflow Path: {{ 'MCP → AAP Job Launch' if mcp_completed else 'AI Generation (' + ai_backend + ') → Git Push' }}"
-          - "{{ 'AAP Job Template: ' + mcp_template_name if mcp_completed else 'Generated Playbook: ' + git_playbook_dir + '/' + ai_playbook_filename }}"
-          - "{{ 'MCP Score: ' + (mcp_score | string) if mcp_completed else 'AI Backend: ' + ai_backend_used }}"
-          - "{{ 'Job ID: ' + (mcp_job_id | string) if mcp_completed else 'Git Pushed: ' + (ai_git_pushed | string) }}"
-          - "{{ '' if mcp_completed else 'Review Branch: ' + (ai_git_review_branch | default('N/A')) }}"
-          - "{{ '' if mcp_completed else 'CaC JT: ' + (cac_jt_name | default('N/A')) }}"
-          - "{{ '' if mcp_completed else 'CaC WF: ' + (cac_wf_name | default('N/A')) }}"
-          - "=========================================="
+        msg: >-
+          {{ 'MCP matched: ' + mcp_template_name + ' (score=' + (mcp_score | string) + ', job=' + (mcp_job_id | string) + ')'
+             if mcp_completed else
+             'AI Generated (' + ai_backend_used + '): ' + git_playbook_dir + '/' + ai_playbook_filename +
+             ' | branch=' + (ai_git_review_branch | default('N/A')) +
+             ' | CaC JT=' + (cac_jt_name | default('N/A')) +
+             ' WF=' + (cac_wf_name | default('N/A')) }}

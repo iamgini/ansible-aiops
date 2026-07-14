@@ -18,10 +18,6 @@
     msg: "Coder CLI is not installed or not in PATH. Install from: https://coder.com/docs/install"
   when: coder_version.rc != 0
 
-- name: Display Coder version
-  ansible.builtin.debug:
-    msg: "Using Coder CLI: {{ coder_version.stdout }}"
-
 - name: Create Coder workspace from template
   ansible.builtin.command:
     cmd: >
@@ -50,14 +46,6 @@
     workspace_status.stdout | from_json |
     selectattr('name', 'equalto', workspace_name) |
     map(attribute='status') | first == 'Running'
-
-- name: Display workspace creation result
-  ansible.builtin.debug:
-    msg:
-      - "✅ Coder Workspace Created"
-      - "Workspace: {{ workspace_name }}"
-      - "Status: {{ workspace_status.stdout | from_json | selectattr('name', 'equalto', workspace_name) | map(attribute='status') | first }}"
-      - "URL: {{ coder_url }}/{{ workspace_name }}"
 
 - name: Build Claude Code prompt from event context
   ansible.builtin.set_fact:
@@ -97,12 +85,6 @@
   register: claude_execution
   timeout: "{{ workspace_timeout }}"
 
-- name: Display Claude Code execution result
-  ansible.builtin.debug:
-    msg:
-      - "Claude Code Execution:"
-      - "{{ claude_execution.stdout_lines }}"
-
 - name: Verify playbook was generated and pushed to git
   ansible.builtin.command:
     cmd: >
@@ -118,14 +100,6 @@
       cat playbooks/{{ playbook_filename }}
   register: playbook_content
 
-- name: Display generated playbook summary
-  ansible.builtin.debug:
-    msg:
-      - "✅ Playbook Generated Successfully"
-      - "Filename: playbooks/{{ playbook_filename }}"
-      - "Size: {{ playbook_content.stdout | length }} bytes"
-      - "Git Repository: {{ git_remote_url }}"
-
 - name: Stop and delete Coder workspace
   ansible.builtin.command:
     cmd: coder delete {{ workspace_name }} --yes
@@ -133,13 +107,6 @@
     - auto_cleanup_workspace | bool
     - playbook_verification.stdout == "exists"
   register: workspace_cleanup
-
-- name: Display cleanup result
-  ansible.builtin.debug:
-    msg: "Workspace {{ workspace_name }} deleted"
-  when:
-    - workspace_cleanup is defined
-    - workspace_cleanup.rc == 0
 
 - name: Set generation results
   ansible.builtin.set_fact:

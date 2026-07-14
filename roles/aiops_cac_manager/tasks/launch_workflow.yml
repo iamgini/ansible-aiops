@@ -19,13 +19,6 @@
     wait: false
   register: wf_launch_result
 
-- name: Display workflow launch result
-  ansible.builtin.debug:
-    msg:
-      - "Workflow launched: {{ wf_launch_name }}"
-      - "Job ID: {{ wf_launch_result.id | default('N/A') }}"
-      - "Status: {{ wf_launch_result.status | default('launched') }}"
-
 - name: Set launch results
   ansible.builtin.set_fact:
     cac_workflow_launched: true
