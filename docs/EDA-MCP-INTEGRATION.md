@@ -297,6 +297,44 @@ ansible -m ansible.mcp.tools_info \
   localhost
 ```
 
+### EDA Rulebook Activation Fails with 404 on `/api/v2/config/`
+
+**Symptom:**
+```
+ansible_rulebook.job_template_runner - ERROR - Error connecting to controller: 404, message='Not Found', url='https://aap.example.com/api/v2/config/'
+ansible_rulebook.cli - ERROR - Terminating: 404, message='Not Found', url='https://aap.example.com/api/v2/config/'
+```
+
+**Cause:** Starting with AAP 2.5+, the unified gateway changed the controller API path from `/api/v2/` to `/api/controller/v2/`. The `ansible-rulebook` inside the Decision Environment is using the legacy path.
+
+**Solutions:**
+
+1. **Verify the AAP credential type** — EDA activations must use a credential of type **"Red Hat Ansible Automation Platform"** (gateway-aware), not the legacy "Controller" type. Check under AAP UI -> Credentials.
+
+2. **Use OAuth2 token authentication** — The AAP gateway only supports OAuth2 tokens, not basic auth (username/password). Generate a token via AAP UI -> Users -> Tokens, or via the API:
+   ```bash
+   curl -X POST https://aap.example.com/api/gateway/v1/tokens/ \
+     -u username:password \
+     -H "Content-Type: application/json" \
+     -d '{"description": "EDA Integration", "scope": "write"}'
+   ```
+
+3. **Update the Decision Environment** — Ensure the DE image contains a version of `ansible-rulebook` compatible with your AAP version. Check the version inside the DE:
+   ```bash
+   podman run --rm <your-de-image> pip show ansible-rulebook
+   ```
+
+4. **Verify the API path** — Confirm which path your AAP gateway responds to:
+   ```bash
+   # New gateway path (AAP 2.5+)
+   curl -sk https://aap.example.com/api/controller/v2/config/
+
+   # Legacy path (should return 404 on AAP 2.5+)
+   curl -sk https://aap.example.com/api/v2/config/
+   ```
+
+**Reference:** [Red Hat Solution 7101444](https://access.redhat.com/solutions/7101444)
+
 ### Authentication Errors
 
 - Verify token validity: Check expiration in AAP UI
