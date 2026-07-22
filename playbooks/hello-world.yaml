@@ -1,0 +1,14 @@
+---
+- name: Hello World - Print Event Details
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Hello World - Event Content
+      ansible.builtin.debug:
+        msg:
+          - "Message:  {{ event_message | default('') }}"
+          - "Source:   {{ event_source | default('') }}"
+          - "Host:     {{ event_host | default('') }}"
+          - "Severity: {{ event_severity | default('') }}"
+          - "Payload:  {{ event_payload | default({}) }}"
