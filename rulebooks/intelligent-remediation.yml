@@ -17,6 +17,25 @@
 
   rules:
     # =========================================================================
+    # DEBUG: Hello World - Debug Test
+    # =========================================================================
+    - name: Debug Hello
+      condition: event.payload.debug is defined and event.payload.debug == true
+      action:
+        debug:
+          msg: "Hello"
+
+    # =========================================================================
+    # HELLO AAP: Trigger Hello World Job Template
+    # =========================================================================
+    - name: Hello AAP - Launch Hello World Job Template
+      condition: event.payload.message is defined and event.payload.message == "Hello AAP"
+      action:
+        run_job_template:
+          name: "Hello World"
+          organization: "Default"
+
+    # =========================================================================
     # CASE 1: High Disk Usage - Known Remediation
     # =========================================================================
     - name: High Disk Usage - Launch AAP Job Template
