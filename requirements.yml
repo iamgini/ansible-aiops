@@ -18,10 +18,6 @@ collections:
   - name: ansible.controller
     version: ">=4.5.0"
 
-  # AWX/AAP Job Launching (Required for launching templates)
-  - name: awx.awx
-    version: ">=23.0.0"
-
   # Platform Integration (Optional)
   - name: ansible.platform
     version: ">=1.0.0"

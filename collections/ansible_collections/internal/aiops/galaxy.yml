@@ -13,7 +13,6 @@ license:
   - GPL-2.0-or-later
 repository: https://github.com/iamgini/ansible-aiops
 dependencies:
-  awx.awx: ">=23.0.0"
   ansible.controller: ">=4.5.0"
   infra.aap_configuration: ">=2.0.0"
 build_ignore:

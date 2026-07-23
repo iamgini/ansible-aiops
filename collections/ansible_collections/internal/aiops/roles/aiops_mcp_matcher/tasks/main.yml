@@ -40,7 +40,7 @@
     - mcp_response.json.content[0].templates | length > 0
 
 - name: Launch AAP job template (high confidence match)
-  awx.awx.job_launch:
+  ansible.controller.job_launch:
     controller_host: "{{ controller_host }}"
     controller_username: "{{ controller_username }}"
     controller_password: "{{ controller_password }}"
