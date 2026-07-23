@@ -547,7 +547,7 @@ export GIT_USERNAME="aiops-bot"
 export GIT_EMAIL="aiops@example.com"
 
 # AAP/MCP (existing)
-export AAP_MCP_SERVER_URL="https://aap.example.com:8448"
+export AAP_MCP_SERVER_URL="https://aap.example.com:8448/job_management/mcp"
 export AAP_BEARER_TOKEN="your_aap_bearer_token"
 
 # Optional: Claude Code API Key (if not in Docker image)

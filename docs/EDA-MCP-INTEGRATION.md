@@ -35,7 +35,7 @@ The MCP server provides a programmatic interface to AAP APIs.
 # Follow AAP 2.6.4+ installation guide for MCP server
 
 # Set environment variables
-export AAP_MCP_SERVER_URL="https://aap.example.com:8448"
+export AAP_MCP_SERVER_URL="https://aap.example.com:8448/job_management/mcp"
 export AAP_BEARER_TOKEN="your_aap_token_here"
 ```
 
@@ -125,7 +125,7 @@ Located at: `rulebooks/find-template-on-unmatched-event.yml`
 **Using ansible-rulebook CLI:**
 ```bash
 # Set required environment variables
-export AAP_MCP_SERVER_URL="https://aap.example.com:8448"
+export AAP_MCP_SERVER_URL="https://aap.example.com:8448/job_management/mcp"
 export AAP_BEARER_TOKEN="your_token_here"
 
 # Run the rulebook

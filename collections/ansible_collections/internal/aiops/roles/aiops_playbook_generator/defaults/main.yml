@@ -25,7 +25,7 @@ lightspeed_token: "{{ lookup('env', 'LIGHTSPEED_TOKEN') | default(lookup('env', 
 # Generic API Backend Configuration (OpenAI-compatible)
 generic_api_url: "{{ lookup('env', 'GENERIC_AI_API_URL') | default('http://localhost:11434/v1/chat/completions', true) }}"
 generic_api_token: "{{ lookup('env', 'GENERIC_AI_API_TOKEN') | default('', true) }}"
-generic_api_model: "{{ lookup('env', 'GENERIC_API_MODEL') | default('gpt-4', true) }}"
+generic_ai_model: "{{ lookup('env', 'GENERIC_AI_MODEL') | default('gpt-4', true) }}"
 
 # Coder Backend Configuration
 coder_url: "{{ lookup('env', 'CODER_URL') | default('https://coder.example.com', true) }}"

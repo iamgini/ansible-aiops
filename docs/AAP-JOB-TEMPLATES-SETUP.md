@@ -231,7 +231,7 @@ You need to create **5 AAP job templates** that the EDA rulebook will launch:
   - ✅ Extra Variables
 - **Environment Variables:**
   ```yaml
-  AAP_MCP_SERVER_URL: https://aap.example.com:8448
+  AAP_MCP_SERVER_URL: https://aap.example.com:8448/job_management/mcp
   AAP_BEARER_TOKEN: <from credential>
   GIT_TOKEN: <from credential>
   GIT_USERNAME: your_github_username

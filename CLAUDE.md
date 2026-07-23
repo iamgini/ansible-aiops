@@ -52,7 +52,7 @@ Code Assistant integration in `generate-and-push.yml`:
 
 ```bash
 # MCP Server Configuration (REQUIRED for template matching)
-export AAP_MCP_SERVER_URL="https://aap.example.com:8448"
+export AAP_MCP_SERVER_URL="https://aap.example.com:8448/job_management/mcp"
 export AAP_BEARER_TOKEN="your_aap_oauth2_token_here"
 
 # Red Hat Code Assistant (for AI playbook generation)
@@ -184,7 +184,7 @@ The project includes 3 custom AAP credential types in `deploy/aap-credential-typ
 | Credential Type | Injected Env Vars | Purpose |
 |---|---|---|
 | AIOps - MCP Bearer Token | `MCP_BEARER_TOKEN`, `AAP_MCP_SERVER_URL` | MCP server authentication |
-| AIOps - Generic AI API | `GENERIC_AI_API_TOKEN`, `GENERIC_AI_API_URL`, `GENERIC_API_MODEL` | AI playbook generation backend |
+| AIOps - Generic AI API | `GENERIC_AI_API_TOKEN`, `GENERIC_AI_API_URL`, `GENERIC_AI_MODEL` | AI playbook generation backend |
 | AIOps - Git Token | `GIT_TOKEN`, `GIT_REMOTE_URL`, `GIT_USERNAME`, `GIT_EMAIL` | Generated playbook git push |
 
 Deploy to AAP:

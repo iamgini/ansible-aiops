@@ -35,7 +35,7 @@ This installs:
 cp .env.example .env
 
 # Edit with your values
-export AAP_MCP_SERVER_URL="https://aap.example.com:8448"
+export AAP_MCP_SERVER_URL="https://aap.example.com:8448/job_management/mcp"
 export AAP_BEARER_TOKEN="your_aap_token_here"
 ```
 

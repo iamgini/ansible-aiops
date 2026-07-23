@@ -95,7 +95,7 @@ cp .env.example .env
 **Required environment variables:**
 ```bash
 # For MCP Integration
-export AAP_MCP_SERVER_URL="https://aap.example.com:8448"
+export AAP_MCP_SERVER_URL="https://aap.example.com:8448/job_management/mcp"
 export AAP_BEARER_TOKEN="your_aap_bearer_token_here"
 
 # For Git Integration
@@ -213,7 +213,7 @@ generated-playbooks/
 - **Option 2 (Open Source)**: [ansible-ai-connect-service](https://github.com/ansible/ansible-ai-connect-service) - Self-hosted, supports multiple LLM backends (OpenAI, Azure OpenAI, Watsonx, RHOAI, RHEL AI, Ollama)
 
 **Infrastructure**:
-- **[AAP MCP Server](https://github.com/ansible/aap-mcp-server)**: Model Context Protocol server for AAP (https://aap.example.com:8448)
+- **[AAP MCP Server](https://github.com/ansible/aap-mcp-server)**: Model Context Protocol server for AAP (https://aap.example.com:8448/job_management/mcp)
 - **[Ansible Automation Platform](https://www.redhat.com/en/technologies/management/ansible/trial)**: Version 2.6+ with MCP support
 
 ### Tools

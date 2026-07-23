@@ -48,7 +48,7 @@
     headers: "{{ generic_api_headers }}"
     body_format: json
     body:
-      model: "{{ generic_api_model }}"
+      model: "{{ generic_ai_model }}"
       messages:
         - role: "user"
           content: "{{ generation_prompt }}"

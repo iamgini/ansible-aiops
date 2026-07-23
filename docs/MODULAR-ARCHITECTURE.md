@@ -195,7 +195,7 @@ ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
 
 **Environment variables needed**:
 ```bash
-export AAP_MCP_SERVER_URL="https://aap.example.com:8448"
+export AAP_MCP_SERVER_URL="https://aap.example.com:8448/job_management/mcp"
 export AAP_BEARER_TOKEN="your_aap_token"
 export LIGHTSPEED_URL="http://localhost:8000/api/v0/ai/generations/"
 export LIGHTSPEED_TOKEN="your_lightspeed_token"

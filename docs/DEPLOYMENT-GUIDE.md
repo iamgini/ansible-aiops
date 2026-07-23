@@ -182,7 +182,7 @@ fields:
   - id: mcp_server_url
     type: string
     label: AAP MCP Server URL
-    help_text: "e.g., https://aap.example.com:8448"
+    help_text: "e.g., https://aap.example.com:8448/job_management/mcp"
   - id: aap_bearer_token
     type: string
     label: AAP Bearer Token
@@ -214,7 +214,7 @@ fields:
     type: string
     label: AI API URL
     help_text: "OpenAI-compatible chat completions endpoint URL"
-  - id: generic_api_model
+  - id: generic_ai_model
     type: string
     label: AI Model
     help_text: "Model name (e.g., gpt-4, gpt-4o, llama3, mistral)"
@@ -228,7 +228,7 @@ required:
 env:
   GENERIC_AI_API_TOKEN: "{{ generic_ai_api_token }}"
   GENERIC_AI_API_URL: "{{ generic_ai_api_url }}"
-  GENERIC_API_MODEL: "{{ generic_api_model }}"
+  GENERIC_AI_MODEL: "{{ generic_ai_model }}"
 ```
 
 **Credential Type 3: Git SCM**
@@ -269,7 +269,7 @@ env:
 - Name: `AAP MCP`
 - Credential Type: `AAP MCP`
 - Fill in values:
-  - MCP Server URL: `https://aap.example.com:8448`
+  - MCP Server URL: `https://aap.example.com:8448/job_management/mcp`
   - AAP Bearer Token: `<your_token>`
 
 **Credential 2:**
