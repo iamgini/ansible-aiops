@@ -1,0 +1,10 @@
+{
+  "alert_name": "certificate_expiry",
+  "event_type": "cert_expiring",
+  "host": "lb-01.example.com",
+  "severity": "high",
+  "description": "SSL certificate expiring in 7 days",
+  "cert_path": "/etc/ssl/certs/server.crt",
+  "days_until_expiry": 7,
+  "timestamp": "2026-07-23T12:00:00Z"
+}

@@ -17,7 +17,10 @@
       "Read(//tmp/**)",
       "WebFetch(domain:discuss.elastic.co)",
       "WebFetch(domain:help.radiantsecurity.ai)",
-      "WebFetch(domain:www.elastic.co)"
+      "WebFetch(domain:www.elastic.co)",
+      "Bash(echo \"---EXIT:$?\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(git *)"
     ]
   }
 }

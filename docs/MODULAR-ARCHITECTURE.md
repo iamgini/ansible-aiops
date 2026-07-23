@@ -4,7 +4,7 @@ This document describes the refactored modular architecture for the Intelligent 
 
 ## Overview
 
-The workflow has been refactored from a monolithic playbook into **reusable roles** with **pluggable AI backends**.
+The workflow has been refactored from a monolithic playbook into a **local Ansible collection** (`internal.aiops`) with **reusable roles** and **pluggable AI backends**.
 
 **Before (Monolithic):**
 - Single large playbook (~300 lines)
@@ -12,74 +12,94 @@ The workflow has been refactored from a monolithic playbook into **reusable role
 - Separate playbook for Coder integration
 - Difficult to maintain and extend
 
-**After (Modular):**
+**After (Collection-based):**
 - Orchestrator playbook (90 lines)
-- 2 focused roles (MCP matcher, AI generator)
-- Pluggable backends (Lightspeed or Coder)
+- Local collection `internal.aiops` with 3 roles
+- Roles referenced via FQCN (`internal.aiops.aiops_mcp_matcher`)
+- Pluggable AI backends (Lightspeed, Generic API, or Coder)
 - Easy to add new AI backends
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Playbook: intelligent-aiops-workflow.yml              │
-│  (Orchestrator - 90 lines)                             │
+│  Playbook: intelligent-aiops-workflow.yml               │
+│  (Orchestrator - 90 lines)                              │
 └────────────┬────────────────────────────────────────────┘
              │
              ▼
 ┌────────────────────────────────────────────────────────┐
+│  Collection: internal.aiops                            │
+├────────────────────────────────────────────────────────┤
 │  Role: aiops_mcp_matcher                               │
 │  ├─ Query AAP via MCP                                  │
 │  ├─ Score job templates                                │
 │  ├─ Launch job if score ≥ threshold                    │
 │  └─ Set: mcp_completed = true/false                    │
-└────────────┬────────────────────────────────────────────┘
-             │
-             ▼ (if mcp_completed = false)
-┌────────────────────────────────────────────────────────┐
+├────────────────────────────────────────────────────────┤
 │  Role: aiops_playbook_generator                        │
 │  ├─ Validate ai_backend variable                       │
 │  └─ Include backend-specific tasks:                    │
-│      ├─ backend_lightspeed.yml (API calls)             │
-│      └─ backend_coder.yml (Workspace + Claude Code)    │
+│      ├─ backend_lightspeed.yml                         │
+│      ├─ backend_generic_api.yml                        │
+│      └─ backend_coder.yml                              │
+├────────────────────────────────────────────────────────┤
+│  Role: aiops_cac_manager                               │
+│  ├─ Create AAP Job Template via CaC                    │
+│  ├─ Create AAP Workflow Template via CaC               │
+│  └─ Launch workflow for approval + execution           │
 └────────────────────────────────────────────────────────┘
-             │
-             ▼
-         ┌───────┐
-         │  Done │
-         └───────┘
 ```
 
 ## Directory Structure
 
 ```
 ansible-aiops/
+├── ansible.cfg                           # collections_paths = ./collections
 ├── playbooks/
-│   └── intelligent-aiops-workflow.yml    # Main orchestrator (NEW)
+│   └── intelligent-aiops-workflow.yml    # Main orchestrator
 │
-├── roles/
-│   ├── aiops_mcp_matcher/                # Role 1: MCP integration
-│   │   ├── defaults/
-│   │   │   └── main.yml                  # Default variables
-│   │   └── tasks/
-│   │       └── main.yml                  # MCP query and job launch
-│   │
-│   └── aiops_playbook_generator/         # Role 2: AI generation (pluggable)
-│       ├── defaults/
-│       │   └── main.yml                  # Default variables
-│       └── tasks/
-│           ├── main.yml                  # Backend selector
-│           ├── backend_lightspeed.yml    # Lightspeed/API backend
-│           └── backend_coder.yml         # Coder + Claude Code backend
+├── collections/ansible_collections/internal/aiops/
+│   ├── galaxy.yml                        # Collection metadata
+│   └── roles/
+│       ├── aiops_mcp_matcher/            # Role 1: MCP integration
+│       │   ├── defaults/main.yml
+│       │   ├── tasks/main.yml
+│       │   └── meta/main.yml
+│       │
+│       ├── aiops_playbook_generator/     # Role 2: AI generation (pluggable)
+│       │   ├── defaults/main.yml
+│       │   ├── meta/main.yml
+│       │   └── tasks/
+│       │       ├── main.yml              # Backend selector
+│       │       ├── backend_lightspeed.yml
+│       │       ├── backend_generic_api.yml
+│       │       ├── backend_coder.yml
+│       │       ├── validate_playbook.yml
+│       │       ├── git_push.yml
+│       │       └── generate_with_retry.yml
+│       │
+│       └── aiops_cac_manager/            # Role 3: CaC management
+│           ├── defaults/main.yml
+│           ├── meta/main.yml
+│           ├── tasks/
+│           │   ├── main.yml
+│           │   ├── authenticate.yml
+│           │   ├── create_resources.yml
+│           │   └── launch_workflow.yml
+│           └── templates/
+│               ├── project.yml.j2
+│               ├── job_template.yml.j2
+│               └── workflow_template.yml.j2
 │
 └── docs/
-    ├── CODER-INTEGRATION.md              # Coder backend setup guide
+    ├── CODER-INTEGRATION.md
     └── MODULAR-ARCHITECTURE.md           # This file
 ```
 
 ## Roles
 
-### Role 1: `aiops_mcp_matcher`
+### Role 1: `internal.aiops.aiops_mcp_matcher`
 
 **Purpose**: Query AAP via MCP to find and launch existing job templates.
 
@@ -100,7 +120,7 @@ ansible-aiops/
 3. If best score ≥ threshold → Launch AAP job → Set `mcp_completed=true`
 4. Otherwise → Set `mcp_completed=false` → Next role will generate playbook
 
-### Role 2: `aiops_playbook_generator`
+### Role 2: `internal.aiops.aiops_playbook_generator`
 
 **Purpose**: Generate Ansible playbooks using AI (pluggable backend).
 
@@ -283,7 +303,7 @@ Roles have sensible defaults in `defaults/main.yml`. Override in inventory or pl
 ```yaml
 - name: Execute AI generator with custom settings
   ansible.builtin.include_role:
-    name: aiops_playbook_generator
+    name: internal.aiops.aiops_playbook_generator
   vars:
     ai_backend: "coder"
     workspace_timeout: 1200  # 20 minutes instead of default 10
@@ -377,7 +397,7 @@ To add a new AI backend (e.g., "ollama", "openai"):
 
 1. **Create backend tasks file**:
    ```bash
-   touch roles/aiops_playbook_generator/tasks/backend_ollama.yml
+   touch collections/ansible_collections/internal/aiops/roles/aiops_playbook_generator/tasks/backend_ollama.yml
    ```
 
 2. **Implement backend logic**:
@@ -409,7 +429,7 @@ To add a new AI backend (e.g., "ollama", "openai"):
 
 3. **Update role main.yml**:
    ```yaml
-   # roles/aiops_playbook_generator/tasks/main.yml
+   # collections/ansible_collections/internal/aiops/roles/aiops_playbook_generator/tasks/main.yml
    
    - name: Validate AI backend selection
      ansible.builtin.assert:
@@ -423,7 +443,7 @@ To add a new AI backend (e.g., "ollama", "openai"):
 
 4. **Add defaults**:
    ```yaml
-   # roles/aiops_playbook_generator/defaults/main.yml
+   # collections/ansible_collections/internal/aiops/roles/aiops_playbook_generator/defaults/main.yml
    
    # Ollama Backend Configuration
    ollama_url: "{{ lookup('env', 'OLLAMA_URL') | default('http://localhost:11434', true) }}"
@@ -487,13 +507,13 @@ To add a new AI backend (e.g., "ollama", "openai"):
 ### Role not found
 
 ```
-ERROR! The role 'aiops_mcp_matcher' was not found
+ERROR! The role 'internal.aiops.aiops_mcp_matcher' was not found
 ```
 
-**Solution**: Ensure `roles/` directory is in the same parent directory as `playbooks/`, or set `roles_path` in `ansible.cfg`:
+**Solution**: Ensure `ansible.cfg` has the correct `collections_paths`:
 ```ini
 [defaults]
-roles_path = ./roles:~/.ansible/roles:/usr/share/ansible/roles
+collections_paths = ./collections:~/.ansible/collections:/usr/share/ansible/collections
 ```
 
 ### Backend validation failed
@@ -534,7 +554,7 @@ cat > test_mcp_matcher.yml <<EOF
 ---
 - hosts: localhost
   roles:
-    - role: aiops_mcp_matcher
+    - role: internal.aiops.aiops_mcp_matcher
       vars:
         event_type: "test"
         event_description: "Test event"
@@ -553,7 +573,7 @@ cat > test_ai_generator.yml <<EOF
 ---
 - hosts: localhost
   roles:
-    - role: aiops_playbook_generator
+    - role: internal.aiops.aiops_playbook_generator
       vars:
         event_type: "test"
         event_description: "Test event"
@@ -567,9 +587,9 @@ ansible-navigator run test_ai_generator.yml -m stdout
 
 ## Future Enhancements
 
-1. **Convert to Ansible Collection**
-   - Package roles as `namespace.aiops` collection
-   - Publish to Ansible Galaxy or Private Automation Hub
+1. **Publish Collection**
+   - Publish `internal.aiops` to Private Automation Hub
+   - Version and distribute via `ansible-galaxy collection build`
 
 2. **Add More Backends**
    - Ollama (local LLM)

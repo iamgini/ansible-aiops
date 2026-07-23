@@ -1,0 +1,6 @@
+{
+  "message": "Hello AAP",
+  "source": "manual-test",
+  "host": "web-01",
+  "severity": "info"
+}

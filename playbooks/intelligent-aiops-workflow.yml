@@ -18,7 +18,7 @@
   tasks:
     - name: Execute MCP matcher role
       ansible.builtin.include_role:
-        name: aiops_mcp_matcher
+        name: internal.aiops.aiops_mcp_matcher
       vars:
         event_type: "{{ event_type }}"
         event_description: "{{ event_description }}"
@@ -29,7 +29,7 @@
 
     - name: Execute AI playbook generator role
       ansible.builtin.include_role:
-        name: aiops_playbook_generator
+        name: internal.aiops.aiops_playbook_generator
       vars:
         event_type: "{{ event_type }}"
         event_description: "{{ event_description }}"
@@ -42,7 +42,7 @@
 
     - name: Execute CaC Manager to create JT and Workflow in AAP
       ansible.builtin.include_role:
-        name: aiops_cac_manager
+        name: internal.aiops.aiops_cac_manager
       vars:
         event_type: "{{ event_type }}"
         event_description: "{{ event_description }}"

@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  role_name: aiops_playbook_generator
+  author: Gineesh Madapparambath
+  description: AI-powered playbook generation with pluggable backends (lightspeed, generic_api, coder)
+  min_ansible_version: "2.16"
+  platforms:
+    - name: GenericLinux
+      versions:
+        - all
+  galaxy_tags:
+    - aiops
+    - ai
+    - playbook-generation
+dependencies: []

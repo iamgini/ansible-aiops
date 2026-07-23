@@ -32,8 +32,8 @@ dist/
 *.retry
 .ansible/
 *.log
-collections/ansible_collections/  # Downloaded collections
-roles/  # Downloaded roles (if using requirements.yml)
+collections/ansible_collections/*/
+!collections/ansible_collections/internal/
 
 # IDE
 .vscode/

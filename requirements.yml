@@ -29,3 +29,7 @@ collections:
   # AAP Configuration as Code (Required for dynamic JT/WF creation)
   - name: infra.aap_configuration
     version: ">=2.0.0"
+
+  # Cryptography (Required for SSL certificate remediation playbook)
+  - name: community.crypto
+    version: ">=2.0.0"

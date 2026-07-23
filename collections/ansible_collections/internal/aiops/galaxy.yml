@@ -1,0 +1,20 @@
+---
+namespace: internal
+name: aiops
+version: 1.0.0
+readme: README.md
+authors:
+  - Gineesh Madapparambath
+description: >-
+  Intelligent AIOps roles for event-driven remediation using MCP-based
+  job template matching, AI-powered playbook generation, and Configuration
+  as Code management for Ansible Automation Platform.
+license:
+  - GPL-2.0-or-later
+repository: https://github.com/iamgini/ansible-aiops
+dependencies:
+  awx.awx: ">=23.0.0"
+  ansible.controller: ">=4.5.0"
+  infra.aap_configuration: ">=2.0.0"
+build_ignore:
+  - "*.tar.gz"

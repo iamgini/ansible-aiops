@@ -1,0 +1,13 @@
+{
+  "watch_id": "disk_usage_watch",
+  "alert_name": "disk_usage_high",
+  "host": "db-server-01",
+  "severity": "critical",
+  "metric": "disk",
+  "value": 95,
+  "partition": "/var",
+  "service": "postgresql",
+  "tags": ["database", "storage", "production"],
+  "message": "Disk usage on /var reached 95%",
+  "timestamp": "2026-07-23T10:30:45.000Z"
+}

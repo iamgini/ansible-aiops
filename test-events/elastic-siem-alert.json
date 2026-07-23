@@ -1,0 +1,18 @@
+{
+  "rule_name": "High CPU Usage Detected",
+  "severity": "high",
+  "risk_score": 75,
+  "description": "CPU usage exceeded 90% for 5 minutes",
+  "host": {
+    "name": "web-server-01",
+    "ip": "192.168.1.100"
+  },
+  "event": {
+    "kind": "signal",
+    "category": ["process"],
+    "action": "high_cpu"
+  },
+  "source": "elastic-siem",
+  "tags": ["cpu", "performance", "production"],
+  "timestamp": "2026-07-23T10:30:45.123Z"
+}

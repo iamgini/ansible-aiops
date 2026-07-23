@@ -2,7 +2,15 @@
 
 Use these curl commands to send test events to the EDA webhook endpoint.
 
-Replace `localhost:5000` with your EDA controller webhook URL (e.g., `https://your-eda-controller:5000`).
+All sample event payloads are in the `test-events/` directory.
+
+## Setup
+
+Set your EDA webhook URL before running the commands:
+
+```bash
+export EDA_WEBHOOK_URL=https://localhost:5000
+```
 
 ---
 
@@ -11,9 +19,9 @@ Replace `localhost:5000` with your EDA controller webhook URL (e.g., `https://yo
 Prints "Hello" in EDA output. Useful to verify EDA is receiving events.
 
 ```bash
-curl -X POST http://localhost:5000/webhook \
+curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d '{"debug": true}'
+  -d @test-events/debug.json
 ```
 
 ## Hello AAP
@@ -21,17 +29,9 @@ curl -X POST http://localhost:5000/webhook \
 Launches the "Hello World" job template in AAP.
 
 ```bash
-curl -X POST http://localhost:5000/webhook \
+curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d '{"message": "Hello AAP"}'
-```
-
-With additional event details:
-
-```bash
-curl -X POST http://localhost:5000/webhook \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Hello AAP", "source": "prometheus", "host": "web-01", "severity": "info"}'
+  -d @test-events/hello-aap.json
 ```
 
 ---
@@ -41,70 +41,45 @@ curl -X POST http://localhost:5000/webhook \
 Matches rulebook rule "High Disk Usage" and launches `Remediate Disk Space` job template.
 
 ```bash
-curl -X POST http://localhost:5000/webhook \
+curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d '{
-    "alert_name": "disk_usage_high",
-    "host": "web-server-01",
-    "severity": "high",
-    "partition": "/var",
-    "value": 95
-  }'
+  -d @test-events/case1-disk-full.json
 ```
 
-**Expected:** EDA launches `Remediate Disk Space` job template on `web-server-01`.
+**Expected:** EDA launches `Remediate Disk Space` job template on `web-server-01.example.com`.
 
 ## Case 2: Service Down
 
 Matches rulebook rule "Service Down" and launches `Restart Service` job template.
 
 ```bash
-curl -X POST http://localhost:5000/webhook \
+curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d '{
-    "alert_name": "service_down",
-    "host": "app-server-01",
-    "severity": "critical",
-    "service": "httpd",
-    "state": "down"
-  }'
+  -d @test-events/case2-service-down.json
 ```
 
-**Expected:** EDA launches `Restart Service` job template on `app-server-01`.
+**Expected:** EDA launches `Restart Service` job template on `app-server-02.example.com`.
 
 ## Case 3: High CPU
 
 Matches rulebook rule "High CPU Usage" and launches `Investigate High CPU` job template.
 
 ```bash
-curl -X POST http://localhost:5000/webhook \
+curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d '{
-    "alert_name": "high_cpu",
-    "host": "db-server-01",
-    "severity": "warning",
-    "metric": "cpu",
-    "value": 92,
-    "duration_minutes": 15
-  }'
+  -d @test-events/case3-high-cpu.json
 ```
 
-**Expected:** EDA launches `Investigate High CPU` job template on `db-server-01`.
+**Expected:** EDA launches `Investigate High CPU` job template on `db-server-01.example.com`.
 
 ## Case 4: Certificate Expiry
 
 Matches rulebook rule "Certificate Expiry Warning" and launches `Renew SSL Certificate` job template.
 
 ```bash
-curl -X POST http://localhost:5000/webhook \
+curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d '{
-    "alert_name": "certificate_expiry",
-    "host": "lb-01.example.com",
-    "severity": "high",
-    "cert_path": "/etc/ssl/certs/server.crt",
-    "days_until_expiry": 7
-  }'
+  -d @test-events/case4-cert-expiry.json
 ```
 
 **Expected:** EDA launches `Renew SSL Certificate` job template on `lb-01.example.com`.
@@ -114,15 +89,9 @@ curl -X POST http://localhost:5000/webhook \
 No match in Cases 1-4. Falls through to the default rule and launches `AI Intelligence - Unknown Event Remediation` job template.
 
 ```bash
-curl -X POST http://localhost:5000/webhook \
+curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d '{
-    "event_type": "database_slow_query",
-    "host": "db-server-03",
-    "severity": "medium",
-    "service": "postgresql",
-    "description": "Queries taking >5 seconds"
-  }'
+  -d @test-events/case-unknown-event.json
 ```
 
 **Expected:** EDA launches `AI Intelligence - Unknown Event Remediation` which runs MCP search, AI playbook generation, and Git push.
@@ -136,49 +105,34 @@ Simulated payloads matching what Elastic SIEM or Watcher would send via webhook.
 ### Elastic SIEM Alert
 
 ```bash
-curl -X POST http://localhost:5000/webhook \
+curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d '{
-    "rule_name": "High CPU Usage Detected",
-    "severity": "high",
-    "risk_score": 75,
-    "description": "CPU usage exceeded 90% for 5 minutes",
-    "host": {
-      "name": "web-server-01",
-      "ip": "192.168.1.100"
-    },
-    "event": {
-      "kind": "signal",
-      "category": ["process"],
-      "action": "high_cpu"
-    },
-    "source": "elastic-siem",
-    "tags": ["cpu", "performance", "production"],
-    "timestamp": "2026-07-23T10:30:45.123Z"
-  }'
+  -d @test-events/elastic-siem-alert.json
 ```
 
 ### Elasticsearch Watcher Alert
 
 ```bash
-curl -X POST http://localhost:5000/webhook \
+curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d '{
-    "watch_id": "disk_usage_watch",
-    "alert_name": "disk_usage_high",
-    "host": "db-server-01",
-    "severity": "critical",
-    "metric": "disk",
-    "value": 95,
-    "partition": "/var",
-    "service": "postgresql",
-    "tags": ["database", "storage", "production"],
-    "message": "Disk usage on /var reached 95%",
-    "timestamp": "2026-07-23T10:30:45.000Z"
-  }'
+  -d @test-events/elastic-watcher-alert.json
 ```
 
 ---
+
+## Test Events Summary
+
+| File | Rulebook Match | Job Template |
+|------|---------------|--------------|
+| `debug.json` | Debug Hello | (prints "Hello" in EDA) |
+| `hello-aap.json` | Hello AAP | Hello World |
+| `case1-disk-full.json` | High Disk Usage | Remediate Disk Space |
+| `case2-service-down.json` | Service Down | Restart Service |
+| `case3-high-cpu.json` | High CPU Usage | Investigate High CPU |
+| `case4-cert-expiry.json` | Certificate Expiry | Renew SSL Certificate |
+| `case-unknown-event.json` | Default (Case 5) | AI Intelligence - Unknown Event Remediation |
+| `elastic-siem-alert.json` | Default (Case 5) | AI Intelligence - Unknown Event Remediation |
+| `elastic-watcher-alert.json` | High Disk Usage | Remediate Disk Space |
 
 ## Verification
 

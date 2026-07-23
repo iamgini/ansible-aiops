@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  role_name: aiops_cac_manager
+  author: Gineesh Madapparambath
+  description: Create AAP Job Templates and Workflow Templates using Configuration as Code
+  min_ansible_version: "2.16"
+  platforms:
+    - name: GenericLinux
+      versions:
+        - all
+  galaxy_tags:
+    - aiops
+    - cac
+    - aap
+dependencies: []
