@@ -308,7 +308,7 @@ Monitoring System → EDA Webhook/Kafka/Source → EDA Rulebook
 ┌────────────────────────────────────────────────┐
 │  Developer Laptop                              │
 │  ┌──────────────────────────────────────────┐ │
-│  │  ansible-rulebook (localhost:5000)       │ │
+│  │  ansible-rulebook (Event Stream/HTTPS)   │ │
 │  └───────────┬──────────────────────────────┘ │
 │              │                                 │
 │  ┌───────────▼──────────────────────────────┐ │

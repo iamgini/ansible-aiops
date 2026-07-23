@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "=========================================="
 echo "  AIOps EDA Test Suite"
-echo "  EDA_WEBHOOK_URL: ${EDA_WEBHOOK_URL:-https://localhost:5000}"
+echo "  EDA_EVENT_STREAM_URL: ${EDA_EVENT_STREAM_URL:-https://aapaio.lab.gineesh.com:443/eda-event-streams/api/eda/v1/external_event_stream/09df4aa9-05ff-4bbd-976e-b5278d314c78/post/}"
 echo "=========================================="
 echo ""
 

@@ -111,8 +111,9 @@ ansible-rulebook \
   --verbose
 
 # In another terminal, send test event
-curl -X POST http://localhost:5000/webhook \
+curl -sk -X POST "${EDA_EVENT_STREAM_URL}" \
   -H "Content-Type: application/json" \
+  -u "${EDA_BASIC_AUTH}" \
   -d '{
     "type": "disk_alert",
     "source": "prometheus",
@@ -400,10 +401,11 @@ ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout -vvv
 # Full integration test (requires MCP server running)
 ./test-mcp-integration.sh
 
-# Manual event submission to EDA
-curl -X POST http://localhost:5000/webhook \
+# Manual event submission to EDA via Event Stream
+curl -sk -X POST "${EDA_EVENT_STREAM_URL}" \
   -H "Content-Type: application/json" \
-  -d @tests/disk-alert.json
+  -u "${EDA_BASIC_AUTH}" \
+  -d @tests/case1-disk-full.json
 ```
 
 ### Performance Testing

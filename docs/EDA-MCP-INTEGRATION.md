@@ -145,10 +145,14 @@ ansible-navigator run \
 
 ### Testing with Sample Events
 
-**Send test webhook event:**
+**Send test event via Event Stream:**
 ```bash
-curl -X POST http://localhost:5000/webhook \
+export EDA_EVENT_STREAM_URL="https://aap.example.com:443/eda-event-streams/api/eda/v1/external_event_stream/<uuid>/post/"
+export EDA_BASIC_AUTH="edatest:your_password"
+
+curl -sk -X POST "${EDA_EVENT_STREAM_URL}" \
   -H "Content-Type: application/json" \
+  -u "${EDA_BASIC_AUTH}" \
   -d '{
     "type": "disk_alert",
     "source": "monitoring_system",

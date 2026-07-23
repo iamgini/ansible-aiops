@@ -21,7 +21,7 @@ This deployment integrates with:
 │              AAP - Event-Driven Ansible (EDA)                    │
 │                                                                  │
 │  Rulebook: intelligent-remediation.yml                          │
-│  Webhook Listener: Port 5000                                    │
+│  Event Stream (via AAP Gateway HTTPS)                           │
 └────────────┬────────────────────────────────────────────────────┘
              │
     ┌────────┴──────────────────┬───────────────────┬────────────┐
@@ -323,62 +323,85 @@ event_severity: medium
 
 #### Step 3.1: Create ansible-aiops Decision Environment Project
 
-**AAP UI → Projects → Add:**
-- Name: `ansible-aiops-rulebooks`
+**AAP UI → Automation Decisions → Projects → Create:**
+- Name: `ansible-aiops`
 - Organization: `Default`
 - SCM Type: `Git`
 - SCM URL: `https://github.com/iamgini/ansible-aiops`
 - SCM Branch: `main`
 - SCM Update: ✅ On Launch
 
-#### Step 3.2: Activate Rulebook
+#### Step 3.2: Create Event Stream Credential
 
-**AAP UI → Automation Decisions → Rulebook Activations → Add:**
+**AAP UI → Automation Decisions → Credentials → Create:**
+- Name: `eda-webhook`
+- Organization: `Default`
+- Credential Type: `Basic Event Stream`
+- Username/Password: Set your values
+
+#### Step 3.3: Create Event Stream
+
+**AAP UI → Automation Decisions → Event Streams → Create:**
+- Name: `AIOps Webhook`
+- Credential: `eda-webhook` (created above)
+
+> **Important:** Copy the generated Event Stream URL. This is the HTTPS endpoint
+> that external systems (Prometheus, Grafana, etc.) will send events to via the
+> AAP gateway. Example format:
+> `https://aap.example.com:443/eda-event-streams/api/eda/v1/external_event_stream/<uuid>/post/`
+
+#### Step 3.4: Create Rulebook Activation
+
+**AAP UI → Automation Decisions → Rulebook Activations → Create:**
 - Name: `Intelligent Remediation`
 - Description: `Routes events to AAP job templates based on type`
-- Project: `ansible-aiops-rulebooks`
+- Project: `ansible-aiops`
 - Rulebook: `rulebooks/intelligent-remediation.yml`
 - Decision Environment: `Default decision environment`
-- Restart Policy: `always`
+- Restart Policy: `On failure`
 - Rulebook Activation Enabled: ✅ Yes
 
-**Service Options:**
-- Enable Webhooks: ✅ Yes
-- Webhook Port: `5000`
+**Event Stream:**
+- Select: `AIOps Webhook` (created above)
 
 **Credentials:**
 - Add AAP credential (for job template launches)
 
 **Click:** `Create rulebook activation`
 
-#### Step 3.3: Verify EDA is Running
+> **Note:** In AAP 2.7, events are received through Event Streams via the gateway (HTTPS).
+> The rulebook's `ansible.eda.webhook` source with `port: 5000` is used internally
+> by the EDA container — external traffic is routed through the Event Stream URL.
 
-```bash
-# Check activation status
-curl https://your-eda-controller:5000/api/eda/status
+#### Step 3.5: Verify EDA is Running
 
-# Or in AAP UI
-# Automation Decisions → Rulebook Activations → "Intelligent Remediation"
-# Status should be "Running"
-```
+**AAP UI:**
+- Automation Decisions → Rulebook Activations → "Intelligent Remediation"
+- Status should be "Running"
+- Check the "History" tab for activation logs
 
 ### Phase 4: Integration & Testing
 
 #### Step 4.1: Configure Event Sources
 
-Point your monitoring systems to EDA webhook:
+Point your monitoring systems to the EDA Event Stream URL (from Step 3.3):
 
 **Prometheus Alertmanager:**
 ```yaml
 receivers:
   - name: 'eda-webhook'
     webhook_configs:
-      - url: 'https://your-eda-controller:5000/webhook'
+      - url: 'https://aap.example.com:443/eda-event-streams/api/eda/v1/external_event_stream/<uuid>/post/'
+        http_config:
+          basic_auth:
+            username: 'edatest'
+            password: 'your_password'
 ```
 
 **Grafana Alert:**
 ```
-Webhook URL: https://your-eda-controller:5000/webhook
+Webhook URL: https://aap.example.com:443/eda-event-streams/api/eda/v1/external_event_stream/<uuid>/post/
+Auth: Basic (username/password from Event Stream credential)
 ```
 
 #### Step 4.2: Test End-to-End Flow
@@ -429,13 +452,10 @@ ls -lt playbooks/  # Latest first
 ### Issue: EDA not receiving events
 
 **Check:**
-```bash
-# Verify EDA is running
-curl https://your-eda-controller:5000/api/eda/status
-
-# Check firewall
-telnet your-eda-controller 5000
-```
+- Verify the rulebook activation is "Running" in AAP UI → Automation Decisions → Rulebook Activations
+- Verify you are sending events to the correct Event Stream URL (HTTPS via gateway)
+- Verify the Basic Auth credentials match the Event Stream credential
+- Check the activation logs in the "History" tab
 
 ### Issue: Job template launch fails
 

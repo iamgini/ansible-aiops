@@ -309,13 +309,23 @@ automation_controller_token: <your_token>
 
 ### Step 7: Activate Rulebook in AAP
 
-1. **AAP UI** → Automation Decisions → Rulebook Activations → Add
-2. **Name:** "Intelligent Remediation"
-3. **Rulebook:** `rulebooks/intelligent-remediation.yml`
-4. **Decision Environment:** Default Decision Environment
-5. **Enable webhook:** Yes
-6. **Webhook port:** 5000
-7. **Activate**
+1. **Create Event Stream credential:** AAP UI → Automation Decisions → Credentials → Create
+   - **Name:** `eda-webhook`
+   - **Credential Type:** `Basic Event Stream`
+   - **Username/Password:** Set your values
+2. **Create Event Stream:** AAP UI → Automation Decisions → Event Streams → Create
+   - **Name:** `AIOps Webhook`
+   - **Credential:** `eda-webhook` (created above)
+   - **Note:** Copy the generated Event Stream URL for configuring external sources
+3. **Create Rulebook Activation:** AAP UI → Automation Decisions → Rulebook Activations → Create
+   - **Name:** `Intelligent Remediation`
+   - **Project:** `ansible-aiops`
+   - **Rulebook:** `rulebooks/intelligent-remediation.yml`
+   - **Decision Environment:** Default Decision Environment
+   - **Event Stream:** `AIOps Webhook` (created above)
+   - **Credential:** AAP credential (for job template launches)
+   - **Restart Policy:** `On failure`
+4. **Activate**
 
 ---
 

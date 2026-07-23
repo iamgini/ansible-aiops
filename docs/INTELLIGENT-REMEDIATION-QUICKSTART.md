@@ -15,7 +15,7 @@ Complete event-driven intelligent remediation system:
                         └──────────────┬──────────────┘
                                        │
                         ┌──────────────▼──────────────┐
-                        │  EDA Rulebook (webhook:5000)│
+                        │  EDA Rulebook (Event Stream)│
                         │  intelligent-remediation.yml│
                         └──────────────┬──────────────┘
                                        │
@@ -116,28 +116,40 @@ ansible-galaxy collection install -r requirements.yml
 # - ansible.controller (for AAP job launches)
 ```
 
-### Step 3: Start EDA Rulebook
+### Step 3: Create Event Stream and Activate Rulebook
 
-```bash
-ansible-rulebook \
-  --rulebook rulebooks/intelligent-remediation.yml \
-  --inventory inventory.yml \
-  --verbose
-```
+In AAP 2.7, events are received through Event Streams via the gateway (HTTPS).
 
-**Expected output:**
-```
-Waiting for events on port 5000...
-```
+1. **Create Event Stream credential:** AAP UI → Automation Decisions → Credentials → Create
+   - **Credential Type:** `Basic Event Stream`
+   - **Username/Password:** Set your values
+
+2. **Create Event Stream:** AAP UI → Automation Decisions → Event Streams → Create
+   - **Credential:** Select the credential created above
+   - **Copy the generated Event Stream URL**
+
+3. **Create Rulebook Activation:** AAP UI → Automation Decisions → Rulebook Activations → Create
+   - **Project:** `ansible-aiops`
+   - **Rulebook:** `rulebooks/intelligent-remediation.yml`
+   - **Event Stream:** Select the Event Stream created above
+   - **Credential:** AAP credential (for job template launches)
+
+4. **Verify:** Status should show "Running" in the activation list
 
 ### Step 4: Test with Events
 
-Open a new terminal and send test events:
+Set the Event Stream URL and credentials, then send test events:
+
+```bash
+export EDA_EVENT_STREAM_URL="https://aap.example.com:443/eda-event-streams/api/eda/v1/external_event_stream/<uuid>/post/"
+export EDA_BASIC_AUTH="edatest:your_password"
+```
 
 #### Test Case 1: High Disk Usage (Known Event)
 ```bash
-curl -X POST http://localhost:5000/webhook \
+curl -sk -X POST "${EDA_EVENT_STREAM_URL}" \
   -H "Content-Type: application/json" \
+  -u "${EDA_BASIC_AUTH}" \
   -d @tests/case1-disk-full.json
 ```
 
@@ -148,8 +160,9 @@ curl -X POST http://localhost:5000/webhook \
 
 #### Test Case 2: Service Down (Known Event)
 ```bash
-curl -X POST http://localhost:5000/webhook \
+curl -sk -X POST "${EDA_EVENT_STREAM_URL}" \
   -H "Content-Type: application/json" \
+  -u "${EDA_BASIC_AUTH}" \
   -d @tests/case2-service-down.json
 ```
 
@@ -159,8 +172,9 @@ curl -X POST http://localhost:5000/webhook \
 
 #### Test Unknown Event (AI Workflow)
 ```bash
-curl -X POST http://localhost:5000/webhook \
+curl -sk -X POST "${EDA_EVENT_STREAM_URL}" \
   -H "Content-Type: application/json" \
+  -u "${EDA_BASIC_AUTH}" \
   -d @tests/case-unknown-event.json
 ```
 
