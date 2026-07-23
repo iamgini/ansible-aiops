@@ -35,7 +35,9 @@
       "mcp__aap-mcp-job-mgmt__activation_instances_list",
       "mcp__aap-mcp-system-monitoring__status_retrieve",
       "mcp__aap-mcp-platform-config__controller-settings_list",
-      "WebFetch(domain:docs.redhat.com)"
+      "WebFetch(domain:docs.redhat.com)",
+      "WebFetch(domain:docs.ansible.com)",
+      "WebFetch(domain:forum.ansible.com)"
     ]
   }
 }
