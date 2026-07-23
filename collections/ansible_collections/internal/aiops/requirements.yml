@@ -8,6 +8,7 @@ collections:
 
   # Model Context Protocol Client (Required for MCP integration)
   - name: ansible.mcp
+    source: https://aapaio.lab.gineesh.com/api/galaxy/
     # version: ">=1.0.0"
 
   # Ansible Utilities (Dependency of ansible.mcp)
