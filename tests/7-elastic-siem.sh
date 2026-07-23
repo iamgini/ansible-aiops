@@ -2,8 +2,10 @@
 # Test 7: Elastic SIEM Alert - Simulated Elastic SIEM webhook
 # Expected: Falls through to AI Intelligence (no specific rule match)
 
-EDA_EVENT_STREAM_URL="${EDA_EVENT_STREAM_URL:-https://aapaio.lab.gineesh.com:443/eda-event-streams/api/eda/v1/external_event_stream/09df4aa9-05ff-4bbd-976e-b5278d314c78/post/}"
-EDA_BASIC_AUTH="${EDA_BASIC_AUTH:-edatest:123456789}"
+if [ -z "${EDA_EVENT_STREAM_URL}" ] || [ -z "${EDA_BASIC_AUTH}" ]; then
+  echo "ERROR: Set EDA_EVENT_STREAM_URL and EDA_BASIC_AUTH before running."
+  exit 1
+fi
 
 echo "=== Test 7: Elastic SIEM Alert ==="
 echo "Sending Elastic SIEM event to ${EDA_EVENT_STREAM_URL}"

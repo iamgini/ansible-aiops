@@ -9,9 +9,11 @@ All sample event payloads are in the `tests/` directory.
 Set your EDA Event Stream URL and Basic Auth credentials before running:
 
 ```bash
-export EDA_EVENT_STREAM_URL="https://aapaio.lab.gineesh.com:443/eda-event-streams/api/eda/v1/external_event_stream/09df4aa9-05ff-4bbd-976e-b5278d314c78/post/"
-export EDA_BASIC_AUTH="edatest:123456789"
+export EDA_EVENT_STREAM_URL="https://aap.example.com:443/eda-event-streams/api/eda/v1/external_event_stream/<uuid>/post/"
+export EDA_BASIC_AUTH="username:password"
 ```
+
+Get the Event Stream URL from: **AAP UI → Automation Decisions → Event Streams → your stream**
 
 > **Note:** In AAP 2.7, events must go through the gateway via an Event Stream (HTTPS).
 > Direct webhook access on port 5000 is not supported.
