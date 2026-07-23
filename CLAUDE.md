@@ -290,17 +290,20 @@ Auto-launching templates is powerful but risky. Guidelines:
 5. **Monitor outcomes** - track success/failure rates
 6. **Implement rollback** - have undo playbooks ready
 
-Example safe auto-launch:
+Example safe auto-launch (uses `ansible.controller.job_launch` after MCP scoring):
 
 ```yaml
 - name: Auto-launch only if very high confidence
-  ansible.mcp.run_tool:
-    tool_name: "controller_api_v2_job_templates_launch"
-    tool_arguments:
-      id: "{{ (scored_templates | first).id }}"
+  ansible.controller.job_launch:
+    controller_host: "{{ controller_host }}"
+    controller_username: "{{ controller_username }}"
+    controller_password: "{{ controller_password }}"
+    validate_certs: false
+    job_template: "{{ best_match.name }}"
+    limit: "{{ event_host }}"
   when:
-    - scored_templates | length > 0
-    - (scored_templates | first).score >= 120  # Very high bar
+    - best_match is defined
+    - best_match.score >= 120  # Very high bar
     - event_severity != 'critical'  # Never auto for critical
     - "'production' not in event_tags"  # Never auto for prod
 ```

@@ -20,7 +20,10 @@
       "WebFetch(domain:www.elastic.co)",
       "Bash(echo \"---EXIT:$?\")",
       "Bash(echo \"exit: $?\")",
-      "Bash(git *)"
+      "Bash(git *)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(gh api *)",
+      "Bash(python3 -c \"import sys,json; [print\\(f['name']\\) for f in json.load\\(sys.stdin\\)]\")"
     ]
   }
 }

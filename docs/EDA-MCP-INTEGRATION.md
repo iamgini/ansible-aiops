@@ -251,23 +251,30 @@ Modify the scoring section in the `aiops_mcp_matcher` role (`collections/ansible
 
 ### Automatic Job Launch
 
-To automatically launch the top-matched template (requires `ALLOW_WRITE_OPERATIONS=true`):
+The `aiops_mcp_matcher` role uses `ansible.controller.job_launch` to launch the best match.
+The MCP query uses the `ansible.mcp.mcp` connection plugin (configured via `add_host` + manifest):
 
 ```yaml
-- name: Launch best matching job template
+# MCP query (delegate_to MCP host)
+- name: Query job templates from AAP via MCP
   ansible.mcp.run_tool:
-    server_url: "{{ mcp_server_url }}"
-    auth_token: "{{ aap_bearer_token }}"
-    tool_name: "controller_api_v2_job_templates_launch"
-    tool_arguments:
-      id: "{{ (scored_templates | first).id }}"
-      extra_vars:
-        triggered_by: "eda_mcp_automation"
-        event_source: "{{ event_source }}"
+    name: job_templates_list
+    args:
+      page_size: 200
+  delegate_to: aap_mcp
+
+# Launch (runs on localhost via ansible.controller)
+- name: Launch best matching job template
+  ansible.controller.job_launch:
+    controller_host: "{{ controller_host }}"
+    controller_username: "{{ controller_username }}"
+    controller_password: "{{ controller_password }}"
+    validate_certs: false
+    job_template: "{{ best_match.name }}"
+    limit: "{{ event_host }}"
   when:
-    - scored_templates is defined
-    - scored_templates | length > 0
-    - (scored_templates | first).score > 80  # Confidence threshold
+    - best_match is defined
+    - best_match.score > 100  # Confidence threshold
 ```
 
 ### Integration with Decision Environments

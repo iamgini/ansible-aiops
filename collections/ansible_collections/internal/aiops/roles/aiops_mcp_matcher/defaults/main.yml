@@ -2,29 +2,25 @@
 # Default variables for aiops_mcp_matcher role
 
 # Role Output Variables (set to safe defaults)
-mcp_completed: false  # Will be set to true if AAP job is launched
+mcp_completed: false
 mcp_action: "not_started"
 mcp_score: 0
 
 # MCP Server Configuration
 mcp_server_url: "{{ lookup('env', 'AAP_MCP_SERVER_URL') | default('', true) }}"
-
+mcp_bearer_token: "{{ lookup('env', 'AAP_BEARER_TOKEN') | default('', true) }}"
 mcp_verify_ssl: false
+mcp_server_name: "aap"
+mcp_manifest_dir: "/tmp"
+mcp_tool_name: "job_templates_list"
+mcp_tool_page_size: 200
 
 # MCP Matching Thresholds
-mcp_confidence_threshold: 100  # Score above this = auto-launch AAP job
-mcp_minimum_score: 50          # Score below this = skip to AI generation
+mcp_confidence_threshold: 100
+mcp_minimum_score: 50
 
 # AAP Controller Configuration (for job launch)
 controller_host: "{{ lookup('env', 'CONTROLLER_HOST') | default('', true) }}"
 controller_username: "{{ lookup('env', 'CONTROLLER_USERNAME') | default('', true) }}"
 controller_password: "{{ lookup('env', 'CONTROLLER_PASSWORD') | default('', true) }}"
 controller_verify_ssl: false
-
-# Event Context (passed from parent playbook)
-# event_type: ""
-# event_description: ""
-# event_host: ""
-# event_severity: ""
-# event_service: ""
-# event_tags: []

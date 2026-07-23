@@ -113,9 +113,10 @@ Monitoring System → EDA Webhook/Kafka/Source → EDA Rulebook
 ┌────────────────────────────────────────────────────────────┐
 │  internal.aiops.aiops_mcp_matcher role                      │
 ├────────────────────────────────────────────────────────────┤
-│  Step 1: Query MCP Server                                  │
+│  Step 1: Query MCP Server (via connection plugin)          │
 │    ansible.mcp.run_tool:                                   │
-│      tool_name: controller_api_v2_job_templates_list       │
+│      name: job_templates_list                              │
+│      delegate_to: aap_mcp (ansible.mcp.mcp connection)    │
 │      → Returns: All accessible job templates               │
 │                                                             │
 │  Step 2: Filter & Match                                    │

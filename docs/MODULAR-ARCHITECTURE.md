@@ -106,7 +106,7 @@ ansible-aiops/
 **Inputs** (from playbook):
 - `event_type`, `event_description`, `event_host`, `event_severity`
 - `event_service`, `event_tags` (optional)
-- `mcp_server_url`, `mcp_bearer_token`
+- `mcp_server_url` (from `AAP_MCP_SERVER_URL` env), `mcp_bearer_token` (from `AAP_BEARER_TOKEN` env)
 - `mcp_confidence_threshold` (default: 100)
 
 **Outputs** (set_fact):

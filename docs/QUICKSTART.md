@@ -204,22 +204,19 @@ Edit `collections/ansible_collections/internal/aiops/roles/aiops_mcp_matcher/tas
 
 ### Auto-Launch High-Confidence Matches
 
-Add to the playbook:
+The `aiops_mcp_matcher` role auto-launches when `best_match.score >= mcp_confidence_threshold` (default: 100).
+To adjust, override the threshold variable:
 
 ```yaml
-- name: Auto-launch if high confidence
-  ansible.mcp.run_tool:
-    server_url: "{{ mcp_server_url }}"
-    auth_token: "{{ aap_bearer_token }}"
-    tool_name: "controller_api_v2_job_templates_launch"
-    tool_arguments:
-      id: "{{ (scored_templates | first).id }}"
-  when:
-    - scored_templates | length > 0
-    - (scored_templates | first).score > 100
+# In playbooks/intelligent-aiops-workflow.yml
+- name: Execute MCP matcher role
+  ansible.builtin.include_role:
+    name: internal.aiops.aiops_mcp_matcher
+  vars:
+    mcp_confidence_threshold: 120  # Raise bar for auto-launch
 ```
 
-**Note:** Requires `ALLOW_WRITE_OPERATIONS=true` in MCP server config.
+The role uses `ansible.controller.job_launch` (not MCP) for the actual launch.
 
 ## Troubleshooting
 
