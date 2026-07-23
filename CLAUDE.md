@@ -15,9 +15,11 @@ This project implements **intelligent event-driven automation** using:
 ### 1. MCP-Based Job Template Matching
 
 The centerpiece is the `internal.aiops.aiops_mcp_matcher` role, called from `playbooks/intelligent-aiops-workflow.yml`:
-- Queries AAP via `ansible.mcp.run_tool` (`controller_api_v2_job_templates_list`)
+- Uses `ansible.mcp.mcp` connection plugin (dynamically creates MCP host via `add_host` + `delegate_to`)
+- Queries AAP via `ansible.mcp.run_tool` with `name: job_templates_list`
+- Generates MCP manifest at runtime from `AAP_MCP_SERVER_URL` env var (no static manifest file)
 - Scores templates based on event attributes (type, service, hostname, severity, tags)
-- Returns top 5 recommendations OR auto-launches highest-scoring template
+- Auto-launches highest-scoring template via `ansible.controller.job_launch` if score >= threshold
 - Integrates seamlessly with EDA rulebooks
 
 **Scoring Algorithm:**
@@ -31,7 +33,7 @@ The centerpiece is the `internal.aiops.aiops_mcp_matcher` role, called from `pla
 
 ### 2. Event-Driven Automation
 
-EDA rulebook at `rulebooks/find-template-on-unmatched-event.yml`:
+EDA rulebook at `rulebooks/intelligent-remediation.yml`:
 - Listens for events from webhooks, Kafka, or other sources
 - Tries specific rules first (disk_alert, service_down, etc.)
 - Falls back to MCP template finder when no rules match
@@ -104,7 +106,7 @@ ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
 ```bash
 # Start EDA rulebook (listens for events)
 ansible-rulebook \
-  --rulebook rulebooks/find-template-on-unmatched-event.yml \
+  --rulebook rulebooks/intelligent-remediation.yml \
   --inventory inventory.yml \
   --verbose
 
@@ -144,7 +146,7 @@ ansible-aiops/
 ├── playbooks/
 │   └── intelligent-aiops-workflow.yml     # Orchestrator (MCP matcher + AI generator + CaC)
 ├── rulebooks/
-│   └── find-template-on-unmatched-event.yml  # EDA rulebook
+│   └── intelligent-remediation.yml           # EDA rulebook
 ├── docs/
 │   ├── ARCHITECTURE.md                   # System architecture diagrams
 │   ├── EDA-MCP-INTEGRATION.md           # Complete integration guide
@@ -204,7 +206,7 @@ ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout -e "eve
 
 ### Adding New EDA Rules
 
-Edit `rulebooks/find-template-on-unmatched-event.yml`:
+Edit `rulebooks/intelligent-remediation.yml`:
 
 ```yaml
 rules:
@@ -218,7 +220,7 @@ rules:
 
 Test:
 ```bash
-ansible-rulebook --rulebook rulebooks/find-template-on-unmatched-event.yml -v
+ansible-rulebook --rulebook rulebooks/intelligent-remediation.yml -v
 ```
 
 ### Creating Custom Event Sources

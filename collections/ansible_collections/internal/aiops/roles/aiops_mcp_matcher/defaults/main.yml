@@ -1,19 +1,13 @@
 ---
 # Default variables for aiops_mcp_matcher role
+#
+# This role handles scoring and launching only.
+# MCP connection and template query are handled by the workflow playbook.
 
 # Role Output Variables (set to safe defaults)
 mcp_completed: false
 mcp_action: "not_started"
 mcp_score: 0
-
-# MCP Server Configuration
-mcp_server_url: "{{ lookup('env', 'AAP_MCP_SERVER_URL') | default('', true) }}"
-mcp_bearer_token: "{{ lookup('env', 'AAP_BEARER_TOKEN') | default('', true) }}"
-mcp_verify_ssl: false
-mcp_server_name: "aap"
-mcp_manifest_dir: "/tmp"
-mcp_tool_name: "job_templates_list"
-mcp_tool_page_size: 200
 
 # MCP Matching Thresholds
 mcp_confidence_threshold: 100

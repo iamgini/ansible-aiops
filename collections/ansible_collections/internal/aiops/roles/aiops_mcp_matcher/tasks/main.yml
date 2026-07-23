@@ -1,99 +1,23 @@
 ---
 # Role: aiops_mcp_matcher
-# Query AAP via MCP (ansible.mcp connection plugin) to find matching job templates, score, and launch
+# Score AAP job templates (from MCP query) against event attributes, launch best match
+#
+# Expects `all_job_templates` to be set by the calling playbook (via MCP query in a separate play).
+# If not set or empty, sets mcp_completed=false so the workflow falls through to AI generation.
 
-- name: Skip MCP query if bearer token not configured
+- name: Check if templates were retrieved via MCP
   ansible.builtin.set_fact:
     mcp_completed: false
-    mcp_skip_reason: "AAP_BEARER_TOKEN not set"
-  when: mcp_bearer_token | length == 0
+    mcp_action: "no_templates"
+    mcp_score: 0
+  when: all_job_templates is not defined or all_job_templates | length == 0
 
-- name: Skip MCP query if server URL not configured
-  ansible.builtin.set_fact:
-    mcp_completed: false
-    mcp_skip_reason: "AAP_MCP_SERVER_URL not configured"
-  when:
-    - mcp_bearer_token | length > 0
-    - mcp_server_url | length == 0
-
-# --- MCP Connection Setup ---
-# ansible.mcp.run_tool requires the ansible.mcp.mcp connection plugin.
-# We dynamically generate the manifest and create the MCP host at runtime
-# so the URL can come from environment variables.
-
-- name: Generate MCP manifest file
-  ansible.builtin.copy:
-    content: |
-      {
-        "{{ mcp_server_name }}": {
-          "type": "http",
-          "url": "{{ mcp_server_url }}",
-          "description": "AAP MCP Server"
-        }
-      }
-    dest: "{{ mcp_manifest_dir }}/aap-mcp-manifest.json"
-    mode: "0600"
-  when:
-    - mcp_bearer_token | length > 0
-    - mcp_server_url | length > 0
-
-- name: Add MCP host for delegation
-  ansible.builtin.add_host:
-    name: aap_mcp
-    ansible_connection: ansible.mcp.mcp
-    ansible_mcp_server_name: "{{ mcp_server_name }}"
-    ansible_mcp_manifest_path: "{{ mcp_manifest_dir }}/aap-mcp-manifest.json"
-    ansible_mcp_bearer_token: "{{ mcp_bearer_token }}"
-    ansible_mcp_validate_certs: "{{ mcp_verify_ssl }}"
-  when:
-    - mcp_bearer_token | length > 0
-    - mcp_server_url | length > 0
-
-# --- Query AAP via MCP ---
-
-- name: MCP request details
+- name: Templates available for scoring
   ansible.builtin.debug:
-    msg:
-      mcp_server: "{{ mcp_server_url }}"
-      event_type: "{{ event_type }}"
-      service: "{{ event_service | default('') }}"
-      hostname: "{{ event_host }}"
-      severity: "{{ event_severity }}"
-  when:
-    - mcp_server_url | length > 0
-    - mcp_bearer_token | length > 0
+    msg: "{{ all_job_templates | length }} templates to score for event_type={{ event_type }}"
+  when: all_job_templates is defined and all_job_templates | length > 0
 
-- name: Query all job templates from AAP via MCP
-  ansible.mcp.run_tool:
-    name: "{{ mcp_tool_name }}"
-    args:
-      page_size: "{{ mcp_tool_page_size }}"
-  register: job_templates_result
-  delegate_to: aap_mcp
-  when:
-    - mcp_server_url | length > 0
-    - mcp_bearer_token | length > 0
-
-- name: Parse job templates from MCP response
-  ansible.builtin.set_fact:
-    all_job_templates: >-
-      {% if job_templates_result.structured_content is defined and job_templates_result.structured_content %}
-        {{ job_templates_result.structured_content.results | default([]) }}
-      {% elif job_templates_result.content is defined and job_templates_result.content | length > 0 %}
-        {{ (job_templates_result.content[0].text | from_json).results | default([]) }}
-      {% else %}
-        []
-      {% endif %}
-  when:
-    - job_templates_result is defined
-    - job_templates_result is not skipped
-
-- name: Templates retrieved
-  ansible.builtin.debug:
-    msg: "{{ all_job_templates | default([]) | length }} templates found via MCP"
-  when: all_job_templates is defined
-
-# --- Scoring and Matching ---
+# --- Matching and Scoring ---
 
 - name: Find matching job templates based on event attributes
   ansible.builtin.set_fact:
@@ -210,14 +134,6 @@
   when: >
     best_match is not defined or
     best_match.score < mcp_confidence_threshold
-
-- name: Clean up MCP manifest
-  ansible.builtin.file:
-    path: "{{ mcp_manifest_dir }}/aap-mcp-manifest.json"
-    state: absent
-  when:
-    - mcp_bearer_token | length > 0
-    - mcp_server_url | length > 0
 
 - name: MCP Matcher Summary
   ansible.builtin.debug:

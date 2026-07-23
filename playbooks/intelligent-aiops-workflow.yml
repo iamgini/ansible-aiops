@@ -2,12 +2,113 @@
 # Intelligent AIOps Workflow
 #
 # Orchestrates AI-powered incident remediation:
-#   1. Query AAP via MCP → Launch job if found
-#   2. Generate playbook with AI → Commit to git
+#   Play 1: Setup MCP connection (localhost)
+#   Play 2: Query AAP templates via MCP (aap_mcp host)
+#   Play 3: Score results → Launch job or AI generate → CaC
 #
 # AI Backends: "lightspeed" (default), "generic_api", or "coder"
 # See: docs/MODULAR-ARCHITECTURE.md
 
+# =============================================================================
+# Play 1: Setup MCP Connection
+# =============================================================================
+- name: Setup MCP Connection
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    mcp_server_url: "{{ lookup('env', 'AAP_MCP_SERVER_URL') | default('', true) }}"
+    mcp_bearer_token: "{{ lookup('env', 'AAP_BEARER_TOKEN') | default(lookup('env', 'MCP_BEARER_TOKEN'), true) | default('', true) }}"
+    mcp_server_name: "aap"
+    mcp_manifest_dir: "/tmp"
+    mcp_verify_ssl: false
+
+  tasks:
+    - name: Validate MCP configuration
+      ansible.builtin.set_fact:
+        mcp_configured: "{{ (mcp_bearer_token | length > 0) and (mcp_server_url | length > 0) }}"
+        mcp_completed: false
+        mcp_action: "not_started"
+        mcp_score: 0
+
+    - name: MCP configuration status
+      ansible.builtin.debug:
+        msg: "{{ 'MCP configured: ' + mcp_server_url if mcp_configured else 'MCP not configured — skipping to AI generation' }}"
+
+    - name: Generate MCP manifest file
+      ansible.builtin.copy:
+        content: |
+          {
+            "{{ mcp_server_name }}": {
+              "type": "http",
+              "url": "{{ mcp_server_url }}",
+              "args": [],
+              "description": "AAP MCP Server"
+            }
+          }
+        dest: "{{ mcp_manifest_dir }}/aap-mcp-manifest.json"
+        mode: "0600"
+      when: mcp_configured
+
+    - name: Add MCP host to runtime inventory
+      ansible.builtin.add_host:
+        name: aap_mcp
+        ansible_connection: ansible.mcp.mcp
+        ansible_mcp_server_name: "{{ mcp_server_name }}"
+        ansible_mcp_manifest_path: "{{ mcp_manifest_dir }}/aap-mcp-manifest.json"
+        ansible_mcp_validate_certs: "{{ mcp_verify_ssl }}"
+        ansible_connect_timeout: 30
+        ansible_command_timeout: 30
+      when: mcp_configured
+
+# =============================================================================
+# Play 2: Query AAP Templates via MCP
+# =============================================================================
+- name: Query AAP Templates via MCP
+  hosts: aap_mcp
+  gather_facts: false
+
+  environment:
+    MCP_BEARER_TOKEN: "{{ hostvars['localhost']['mcp_bearer_token'] | default('') }}"
+
+  vars:
+    mcp_tool_name: "job_templates_list"
+    mcp_tool_page_size: 200
+
+  tasks:
+    - name: Query all job templates from AAP via MCP
+      ansible.mcp.run_tool:
+        name: "{{ mcp_tool_name }}"
+        args:
+          page_size: "{{ mcp_tool_page_size }}"
+      register: job_templates_raw
+      when: hostvars['localhost']['mcp_configured'] | default(false)
+
+    - name: Parse and store templates on localhost
+      ansible.builtin.set_fact:
+        all_job_templates: >-
+          {% if job_templates_raw.structured_content is defined and job_templates_raw.structured_content %}
+            {{ job_templates_raw.structured_content.results | default([]) }}
+          {% elif job_templates_raw.content is defined and job_templates_raw.content | length > 0 %}
+            {{ (job_templates_raw.content[0].text | from_json).results | default([]) }}
+          {% else %}
+            []
+          {% endif %}
+      delegate_to: localhost
+      delegate_facts: true
+      when:
+        - hostvars['localhost']['mcp_configured'] | default(false)
+        - job_templates_raw is defined
+        - job_templates_raw is not skipped
+
+    - name: Templates retrieved
+      ansible.builtin.debug:
+        msg: "{{ hostvars['localhost']['all_job_templates'] | default([]) | length }} templates found via MCP"
+      when: hostvars['localhost']['mcp_configured'] | default(false)
+
+# =============================================================================
+# Play 3: Score, Launch, Generate, CaC
+# =============================================================================
 - name: Intelligent AIOps Workflow
   hosts: localhost
   gather_facts: false
@@ -16,7 +117,7 @@
     ai_backend: "{{ lookup('env', 'AI_BACKEND') | default('lightspeed', true) }}"
 
   tasks:
-    - name: Execute MCP matcher role
+    - name: Execute MCP matcher role (scoring and launch)
       ansible.builtin.include_role:
         name: internal.aiops.aiops_mcp_matcher
       vars:
@@ -53,6 +154,12 @@
         - not mcp_completed
         - ai_generation_completed | default(false)
         - ai_git_pushed | default(false)
+
+    - name: Clean up MCP manifest
+      ansible.builtin.file:
+        path: "/tmp/aap-mcp-manifest.json"
+        state: absent
+      changed_when: false
 
     - name: Workflow Summary
       ansible.builtin.debug:
