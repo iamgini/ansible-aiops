@@ -26,7 +26,8 @@
       "Bash(python3 -c \"import sys,json; [print\\(f['name']\\) for f in json.load\\(sys.stdin\\)]\")",
       "Bash(curl *)",
       "Bash(python3 -m json.tool)",
-      "mcp__aap-mcp-job-mgmt__job_templates_list"
+      "mcp__aap-mcp-job-mgmt__job_templates_list",
+      "Bash(pre-commit install *)"
     ]
   }
 }
