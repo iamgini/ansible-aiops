@@ -14,7 +14,10 @@
       "Bash(mv /tmp/claude.json.tmp /home/gmadappa/.claude.json)",
       "WebSearch",
       "Bash(cat)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "WebFetch(domain:discuss.elastic.co)",
+      "WebFetch(domain:help.radiantsecurity.ai)",
+      "WebFetch(domain:www.elastic.co)"
     ]
   }
 }

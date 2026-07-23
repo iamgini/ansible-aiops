@@ -171,21 +171,21 @@ Debug test (prints "Hello" in EDA output):
 ```bash
 curl -X POST http://localhost:5000/webhook \
   -H "Content-Type: application/json" \
-  -d '{"payload": {"debug": true}}'
+  -d '{"debug": true}'
 ```
 
 Hello AAP (launches "Hello World" job template):
 ```bash
 curl -X POST http://localhost:5000/webhook \
   -H "Content-Type: application/json" \
-  -d '{"payload": {"message": "Hello AAP"}}'
+  -d '{"message": "Hello AAP"}'
 ```
 
 Hello AAP with event details:
 ```bash
 curl -X POST http://localhost:5000/webhook \
   -H "Content-Type: application/json" \
-  -d '{"payload": {"message": "Hello AAP", "source": "prometheus", "host": "web-01", "severity": "info"}}'
+  -d '{"message": "Hello AAP", "source": "prometheus", "host": "web-01", "severity": "info"}'
 ```
 
 Disk alert event:
