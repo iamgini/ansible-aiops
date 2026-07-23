@@ -2,7 +2,7 @@
 
 Use these curl commands to send test events to the EDA webhook endpoint.
 
-All sample event payloads are in the `test-events/` directory.
+All sample event payloads are in the `tests/` directory.
 
 ## Setup
 
@@ -21,7 +21,7 @@ Prints "Hello" in EDA output. Useful to verify EDA is receiving events.
 ```bash
 curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d @test-events/debug.json
+  -d @tests/debug.json
 ```
 
 ## Hello AAP
@@ -31,7 +31,7 @@ Launches the "Hello World" job template in AAP.
 ```bash
 curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d @test-events/hello-aap.json
+  -d @tests/hello-aap.json
 ```
 
 ---
@@ -43,7 +43,7 @@ Matches rulebook rule "High Disk Usage" and launches `Remediate Disk Space` job 
 ```bash
 curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d @test-events/case1-disk-full.json
+  -d @tests/case1-disk-full.json
 ```
 
 **Expected:** EDA launches `Remediate Disk Space` job template on `web-server-01.example.com`.
@@ -55,7 +55,7 @@ Matches rulebook rule "Service Down" and launches `Restart Service` job template
 ```bash
 curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d @test-events/case2-service-down.json
+  -d @tests/case2-service-down.json
 ```
 
 **Expected:** EDA launches `Restart Service` job template on `app-server-02.example.com`.
@@ -67,7 +67,7 @@ Matches rulebook rule "High CPU Usage" and launches `Investigate High CPU` job t
 ```bash
 curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d @test-events/case3-high-cpu.json
+  -d @tests/case3-high-cpu.json
 ```
 
 **Expected:** EDA launches `Investigate High CPU` job template on `db-server-01.example.com`.
@@ -79,7 +79,7 @@ Matches rulebook rule "Certificate Expiry Warning" and launches `Renew SSL Certi
 ```bash
 curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d @test-events/case4-cert-expiry.json
+  -d @tests/case4-cert-expiry.json
 ```
 
 **Expected:** EDA launches `Renew SSL Certificate` job template on `lb-01.example.com`.
@@ -91,7 +91,7 @@ No match in Cases 1-4. Falls through to the default rule and launches `AI Intell
 ```bash
 curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d @test-events/case-unknown-event.json
+  -d @tests/case-unknown-event.json
 ```
 
 **Expected:** EDA launches `AI Intelligence - Unknown Event Remediation` which runs MCP search, AI playbook generation, and Git push.
@@ -107,7 +107,7 @@ Simulated payloads matching what Elastic SIEM or Watcher would send via webhook.
 ```bash
 curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d @test-events/elastic-siem-alert.json
+  -d @tests/elastic-siem-alert.json
 ```
 
 ### Elasticsearch Watcher Alert
@@ -115,7 +115,7 @@ curl -X POST ${EDA_WEBHOOK_URL}/webhook \
 ```bash
 curl -X POST ${EDA_WEBHOOK_URL}/webhook \
   -H "Content-Type: application/json" \
-  -d @test-events/elastic-watcher-alert.json
+  -d @tests/elastic-watcher-alert.json
 ```
 
 ---

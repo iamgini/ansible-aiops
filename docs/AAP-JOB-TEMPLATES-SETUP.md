@@ -380,7 +380,7 @@ Then attach both credentials (`AAP MCP` and `Git SCM`) to Job Template 5.
 
 ## Testing Workflow
 
-See [Testing with curl - Sample Events](TESTING-CURL-EVENTS.md) for all test cases (debug, Cases 1-5, Elastic-style alerts).
+See [Testing with curl - Sample Events](../tests/TESTING-CURL-EVENTS.md) for all test cases (debug, Cases 1-5, Elastic-style alerts).
 
 ---
 

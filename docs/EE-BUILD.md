@@ -108,8 +108,7 @@ podman push registry.example.com/aiops-ee:1.0.0
 |------------|---------|---------|
 | `ansible.eda` | 1.0.0+ | Event-Driven Automation |
 | `ansible.mcp` | 1.0.0+ | MCP client for AAP integration |
-| `ansible.controller` | 4.5.0+ | AAP controller interaction |
-| `awx.awx` | 23.0.0+ | Job template launching |
+| `ansible.controller` | 4.5.0+ | AAP controller interaction, job launching |
 | `ansible.utils` | 2.0.0+ | Utility functions |
 | `ansible.platform` | 1.0.0+ | Platform integration |
 

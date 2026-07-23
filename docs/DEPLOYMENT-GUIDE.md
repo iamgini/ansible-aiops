@@ -339,7 +339,7 @@ Webhook URL: https://your-eda-controller:5000/webhook
 
 #### Step 4.2: Test End-to-End Flow
 
-See [Testing with curl - Sample Events](TESTING-CURL-EVENTS.md) for all test cases (debug, Cases 1-5, Elastic-style alerts).
+See [Testing with curl - Sample Events](../tests/TESTING-CURL-EVENTS.md) for all test cases (debug, Cases 1-5, Elastic-style alerts).
 
 ## Monitoring & Operations
 

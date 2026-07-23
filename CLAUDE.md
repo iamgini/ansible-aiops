@@ -375,7 +375,7 @@ ansible-navigator run playbooks/find-matching-job-template.yml -m stdout -vvv
 # Manual event submission to EDA
 curl -X POST http://localhost:5000/webhook \
   -H "Content-Type: application/json" \
-  -d @test-events/disk-alert.json
+  -d @tests/disk-alert.json
 ```
 
 ### Performance Testing

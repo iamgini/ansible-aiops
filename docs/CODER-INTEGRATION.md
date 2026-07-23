@@ -131,8 +131,7 @@ Required collections (installed in Coder workspace):
 
 - `ansible.eda` - Event-driven automation
 - `ansible.mcp` - MCP client for AAP
-- `ansible.controller` - AAP controller interaction
-- `awx.awx` - AWX/AAP job launching
+- `ansible.controller` - AAP controller interaction, job launching
 
 ## Setup
 
@@ -425,8 +424,6 @@ collections:
     version: ">=1.0.0"
   - name: ansible.controller
     version: ">=4.5.0"
-  - name: awx.awx
-    version: ">=23.0.0"
   - name: ansible.utils
     version: ">=2.0.0"
 ```

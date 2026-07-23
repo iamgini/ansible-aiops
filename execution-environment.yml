@@ -102,8 +102,7 @@ options:
 # 3. Collections included:
 #    - ansible.eda (Event-Driven Automation)
 #    - ansible.mcp (Model Context Protocol client)
-#    - ansible.controller (AAP controller interaction)
-#    - awx.awx (Job launching)
+#    - ansible.controller (AAP controller interaction, job launching)
 #
 # 4. Build time: ~3-5 minutes
 # 5. Final image size: ~1.2-1.5 GB

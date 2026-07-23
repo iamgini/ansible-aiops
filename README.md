@@ -64,7 +64,6 @@ This project can work with multiple AI backends for playbook generation:
 | `ansible.mcp` | >=1.0.0 | MCP client for AAP integration | Yes |
 | `ansible.utils` | >=2.0.0 | Utility functions (dependency of ansible.mcp) | Yes |
 | `ansible.controller` | >=4.5.0 | AAP controller modules (JT launch, config) | Yes |
-| `awx.awx` | >=23.0.0 | AWX/AAP job launching | Yes |
 | `infra.aap_configuration` | >=2.0.0 | CaC roles for dynamic JT/WF creation | Yes |
 | `ansible.platform` | >=1.0.0 | AAP platform integration | Optional |
 
@@ -167,7 +166,7 @@ ansible-rulebook \
 
 **Send test events via webhook:**
 
-See [Testing with curl - Sample Events](TESTING-CURL-EVENTS.md) for all test cases including debug, known events (Cases 1-4), unknown events (Case 5), and Elastic-style alerts.
+See [Testing with curl - Sample Events](tests/TESTING-CURL-EVENTS.md) for all test cases, or run scripts from `tests/` directory.
 
 ## Architecture
 
@@ -278,13 +277,22 @@ ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
 
 ## Documentation
 
-### Internal Documentation
-- **[Quick Start Guide](QUICKSTART.md)** - Get started in 5 minutes
-- **[EDA MCP Integration Guide](docs/EDA-MCP-INTEGRATION.md)** - Comprehensive guide for MCP integration
-- **[AAP Job Templates Setup](AAP-JOB-TEMPLATES-SETUP.md)** - Configure AAP job templates
-- **[Deployment Guide](DEPLOYMENT-GUIDE.md)** - Production deployment guide
-- **[Architecture](docs/ARCHITECTURE.md)** - System architecture and design
-- **[Scoring Algorithm](docs/SCORING-ALGORITHM.md)** - Template matching algorithm details
+All documentation lives in [`docs/`](docs/):
+
+| Document | Description |
+|----------|-------------|
+| [Quick Start Guide](docs/QUICKSTART.md) | Get started in 5 minutes |
+| [Deployment Guide](docs/DEPLOYMENT-GUIDE.md) | Production deployment guide |
+| [AAP Job Templates Setup](docs/AAP-JOB-TEMPLATES-SETUP.md) | Configure AAP job templates and credentials |
+| [Intelligent Remediation Quickstart](docs/INTELLIGENT-REMEDIATION-QUICKSTART.md) | End-to-end remediation setup |
+| [EDA MCP Integration](docs/EDA-MCP-INTEGRATION.md) | Comprehensive MCP integration guide |
+| [Architecture](docs/ARCHITECTURE.md) | System architecture and design |
+| [Modular Architecture](docs/MODULAR-ARCHITECTURE.md) | Collection-based role structure |
+| [Scoring Algorithm](docs/SCORING-ALGORITHM.md) | Template matching algorithm details |
+| [Coder Integration](docs/CODER-INTEGRATION.md) | Coder + Claude Code backend |
+| [EE Build](docs/EE-BUILD.md) | Execution Environment build guide |
+| [Remediation Playbooks](docs/REMEDIATION-PLAYBOOKS-SUMMARY.md) | Remediation playbook summary |
+| [Testing](tests/TESTING-CURL-EVENTS.md) | curl test events and scripts |
 
 ### External Documentation & Resources
 
@@ -305,18 +313,17 @@ ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
 
 ```
 ansible-aiops/
-├── playbooks/
-│   └── find-matching-job-template.yml    # MCP-based template finder
-├── rulebooks/
-│   └── find-template-on-unmatched-event.yml  # EDA rulebook
-├── generated-playbooks/
-│   └── playbooks/                        # AI-generated playbooks
-├── docs/
-│   └── EDA-MCP-INTEGRATION.md           # Integration guide
-├── requirements.yml                      # Ansible collection requirements
-├── generate-and-push.yml                # Maya playbook generator
-├── test-mcp-integration.sh              # Test script
-└── .env.example                         # Environment template
+├── ansible.cfg                           # collections_path config
+├── collections/ansible_collections/
+│   └── internal/aiops/                   # Local collection (3 roles)
+├── playbooks/                            # Orchestrator and remediation playbooks
+├── rulebooks/                            # EDA rulebooks
+├── tests/                                # Test scripts and event payloads
+├── docs/                                 # All documentation
+├── generated-playbooks/                  # AI-generated playbooks (output)
+├── requirements.yml                      # Collection dependencies
+├── inventory.yml                         # Inventory with MCP config
+└── .env.example                          # Environment template
 ```
 
 ## Contributing

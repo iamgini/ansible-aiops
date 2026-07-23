@@ -113,7 +113,7 @@ ansible-galaxy collection install -r requirements.yml
 
 # Required collections:
 # - ansible.eda (for EDA webhook source)
-# - awx.awx (for AAP job launches)
+# - ansible.controller (for AAP job launches)
 ```
 
 ### Step 3: Start EDA Rulebook
@@ -138,7 +138,7 @@ Open a new terminal and send test events:
 ```bash
 curl -X POST http://localhost:5000/webhook \
   -H "Content-Type: application/json" \
-  -d @test-events/case1-disk-full.json
+  -d @tests/case1-disk-full.json
 ```
 
 **Expected:**
@@ -150,7 +150,7 @@ curl -X POST http://localhost:5000/webhook \
 ```bash
 curl -X POST http://localhost:5000/webhook \
   -H "Content-Type: application/json" \
-  -d @test-events/case2-service-down.json
+  -d @tests/case2-service-down.json
 ```
 
 **Expected:**
@@ -161,7 +161,7 @@ curl -X POST http://localhost:5000/webhook \
 ```bash
 curl -X POST http://localhost:5000/webhook \
   -H "Content-Type: application/json" \
-  -d @test-events/case-unknown-event.json
+  -d @tests/case-unknown-event.json
 ```
 
 **Expected:**

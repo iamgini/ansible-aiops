@@ -31,6 +31,5 @@ Intelligent AIOps roles for event-driven remediation with Ansible Automation Pla
 
 ## Dependencies
 
-- `awx.awx` >= 23.0.0
 - `ansible.controller` >= 4.5.0
 - `infra.aap_configuration` >= 2.0.0
