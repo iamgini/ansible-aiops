@@ -149,12 +149,12 @@ For each template, **AAP UI → Templates → Add → Job Template:**
 
 #### Step 1.4: Test Job Templates Manually
 
-```bash
-# Test each template via AAP UI or CLI
-awx job_templates launch "Remediate Disk Space" \
-  --limit "test-server-01" \
-  --extra_vars '{"event_severity": "high"}'
-```
+Test via **AAP UI** → Templates → "Remediate Disk Space" → Launch:
+- **Limit:** `test-server-01`
+- **Extra Variables:**
+  ```yaml
+  event_severity: high
+  ```
 
 ### Phase 2: AI Intelligence Setup (Case 5)
 
@@ -168,11 +168,13 @@ awx job_templates launch "Remediate Disk Space" \
 - SCM Branch: `main`
 - Update on Launch: ✅ Enabled
 
-#### Step 2.2: Create Custom Credential Type
+#### Step 2.2: Create Custom Credential Types
+
+**Credential Type 1: AAP MCP**
 
 **AAP UI → Credential Types → Add:**
 
-**Name:** `AIOps Integration`
+**Name:** `AAP MCP`
 
 **Input Configuration:**
 ```yaml
@@ -185,6 +187,24 @@ fields:
     type: string
     label: AAP Bearer Token
     secret: true
+```
+
+**Injector Configuration:**
+```yaml
+env:
+  AAP_MCP_SERVER_URL: "{{ mcp_server_url }}"
+  AAP_BEARER_TOKEN: "{{ aap_bearer_token }}"
+```
+
+**Credential Type 2: Git**
+
+**AAP UI → Credential Types → Add:**
+
+**Name:** `Git`
+
+**Input Configuration:**
+```yaml
+fields:
   - id: git_token
     type: string
     label: GitHub Token
@@ -200,21 +220,26 @@ fields:
 **Injector Configuration:**
 ```yaml
 env:
-  AAP_MCP_SERVER_URL: "{{ mcp_server_url }}"
-  AAP_BEARER_TOKEN: "{{ aap_bearer_token }}"
   GIT_TOKEN: "{{ git_token }}"
   GIT_USERNAME: "{{ git_username }}"
   GIT_EMAIL: "{{ git_email }}"
 ```
 
-#### Step 2.3: Create AIOps Credential
+#### Step 2.3: Create Credentials
 
 **AAP UI → Credentials → Add:**
-- Name: `AIOps Integration`
-- Credential Type: `AIOps Integration` (the one you just created)
+
+**Credential 1:**
+- Name: `AAP MCP`
+- Credential Type: `AAP MCP`
 - Fill in values:
-  - MCP Server URL: `http://localhost:3000/mcp` (if using MCP)
+  - MCP Server URL: `http://localhost:3000/mcp`
   - AAP Bearer Token: `<your_token>`
+
+**Credential 2:**
+- Name: `Git`
+- Credential Type: `Git`
+- Fill in values:
   - Git Token: `ghp_your_github_token`
   - Git Username: `iamgini`
   - Git Email: `your_email@example.com`
@@ -229,7 +254,8 @@ env:
 - Playbook: `playbooks/intelligent-aiops-workflow.yml`
 - Credentials:
   - `Machine Credential` (localhost)
-  - `AIOps Integration` (the custom credential)
+  - `AAP MCP`
+  - `Git`
 - Execution Environment: Default
 - Variables:
   ```yaml
@@ -241,13 +267,11 @@ env:
 
 #### Step 2.5: Test AI Intelligence Template
 
-```bash
-awx job_templates launch "AI Intelligence - Unknown Event Remediation" \
-  --extra_vars '{
-    "event_type": "database_slow_query",
-    "event_host": "db-server-01",
-    "event_severity": "medium"
-  }'
+Test via **AAP UI** → Templates → "AI Intelligence - Unknown Event Remediation" → Launch → Add extra variables:
+```yaml
+event_type: database_slow_query
+event_host: db-server-01
+event_severity: medium
 ```
 
 ### Phase 3: EDA Activation

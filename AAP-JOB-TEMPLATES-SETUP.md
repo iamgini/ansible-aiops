@@ -292,10 +292,9 @@ For each of the 4 remediation templates:
 
 ### Step 5: Test Each Template Manually
 
-```bash
-# Test via AAP UI or CLI
-awx job_templates launch "Remediate Disk Space" \
-  --extra_vars '{"event_host": "test-server"}'
+Test via **AAP UI** → Templates → "Remediate Disk Space" → Launch → Add extra variables:
+```yaml
+event_host: test-server
 ```
 
 ### Step 6: Configure EDA to Use Your AAP
@@ -324,7 +323,9 @@ automation_controller_token: <your_token>
 
 ### For Job Template 5 (AI Intelligence)
 
-Create a **Custom Credential Type** for MCP/Git:
+Create two **Custom Credential Types**:
+
+**Credential Type 1: AAP MCP**
 
 **Input Configuration:**
 ```yaml
@@ -336,6 +337,20 @@ fields:
     type: string
     label: AAP Bearer Token
     secret: true
+```
+
+**Injector Configuration:**
+```yaml
+env:
+  AAP_MCP_SERVER_URL: "{{ mcp_server_url }}"
+  AAP_BEARER_TOKEN: "{{ aap_bearer_token }}"
+```
+
+**Credential Type 2: Git**
+
+**Input Configuration:**
+```yaml
+fields:
   - id: git_token
     type: string
     label: Git Token
@@ -353,14 +368,12 @@ fields:
 **Injector Configuration:**
 ```yaml
 env:
-  AAP_MCP_SERVER_URL: "{{ mcp_server_url }}"
-  AAP_BEARER_TOKEN: "{{ aap_bearer_token }}"
   GIT_TOKEN: "{{ git_token }}"
   GIT_USERNAME: "{{ git_username }}"
   GIT_EMAIL: "{{ git_email }}"
 ```
 
-Then attach this credential to Job Template 5.
+Then attach both credentials (`AAP MCP` and `Git`) to Job Template 5.
 
 ---
 

@@ -229,13 +229,7 @@ vars:
 
 ### Check AAP Jobs
 
-```bash
-# Via Web UI
-https://controller.example.com/#/jobs
-
-# Via CLI
-awx jobs list --all
-```
+Check job status via **AAP UI** → Jobs (or Views → Jobs)
 
 ### Check Generated Playbooks
 
