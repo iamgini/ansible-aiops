@@ -8,7 +8,8 @@ mcp_score: 0
 
 # MCP Server Configuration
 mcp_server_url: "{{ lookup('env', 'AAP_MCP_SERVER_URL') | default('', true) }}"
-mcp_bearer_token: "{{ lookup('env', 'AAP_BEARER_TOKEN') | default('', true) }}"
+
+mcp_verify_ssl: false
 
 # MCP Matching Thresholds
 mcp_confidence_threshold: 100  # Score above this = auto-launch AAP job

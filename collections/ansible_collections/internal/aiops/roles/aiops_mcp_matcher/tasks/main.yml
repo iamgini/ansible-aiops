@@ -8,12 +8,23 @@
     mcp_skip_reason: "MCP server URL not configured"
   when: mcp_server_url | length == 0
 
+- name: MCP request details
+  ansible.builtin.debug:
+    msg:
+      url: "{{ mcp_server_url }}/tools/list_job_templates"
+      method: POST
+      event_type: "{{ event_type }}"
+      service: "{{ event_service | default('') }}"
+      hostname: "{{ event_host }}"
+      severity: "{{ event_severity }}"
+  when: mcp_server_url | length > 0
+
 - name: Query AAP MCP server for matching job templates
   ansible.builtin.uri:
     url: "{{ mcp_server_url }}/tools/list_job_templates"
     method: POST
     headers:
-      Authorization: "Bearer {{ mcp_bearer_token }}"
+      Authorization: "Bearer {{ lookup('env', 'AAP_BEARER_TOKEN') }}"
       Content-Type: "application/json"
     body_format: json
     body:
@@ -23,6 +34,7 @@
         hostname: "{{ event_host }}"
         severity: "{{ event_severity }}"
         tags: "{{ event_tags | default([]) }}"
+    validate_certs: "{{ mcp_verify_ssl }}"
     return_content: true
     status_code: [200, 404]
     timeout: 30

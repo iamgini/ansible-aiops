@@ -290,7 +290,6 @@ All documentation lives in [`docs/`](docs/):
 | [Modular Architecture](docs/MODULAR-ARCHITECTURE.md) | Collection-based role structure |
 | [Scoring Algorithm](docs/SCORING-ALGORITHM.md) | Template matching algorithm details |
 | [Coder Integration](docs/CODER-INTEGRATION.md) | Coder + Claude Code backend |
-| [EE Build](docs/EE-BUILD.md) | Execution Environment build guide |
 | [Remediation Playbooks](docs/REMEDIATION-PLAYBOOKS-SUMMARY.md) | Remediation playbook summary |
 | [Testing](tests/TESTING-CURL-EVENTS.md) | curl test events and scripts |
 
