@@ -4,7 +4,7 @@
 collections:
   # Model Context Protocol Client (Required for MCP integration)
   - name: ansible.mcp
-    source: https://aapaio.lab.gineesh.com/api/galaxy/content/rh-certified/
+    # source: https://aapaio.lab.gineesh.com/api/galaxy/content/rh-certified/
     # version: ">=1.0.0"
 
   # Event-Driven Automation (Required for rulebooks)
