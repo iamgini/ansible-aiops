@@ -3,29 +3,29 @@
 
 collections:
   # Event-Driven Automation (Required for rulebooks)
-  - name: ansible.eda
-    version: ">=1.0.0"
+  # - name: ansible.eda
+  #   version: ">=1.0.0"
 
   # Model Context Protocol Client (Required for MCP integration)
   - name: ansible.mcp
-    version: ">=1.0.0"
+    # version: ">=1.0.0"
 
   # Ansible Utilities (Dependency of ansible.mcp)
-  - name: ansible.utils
-    version: ">=2.0.0"
+  # - name: ansible.utils
+  #   version: ">=2.0.0"
 
   # AAP Controller (Required for MCP and configuration)
-  - name: ansible.controller
-    version: ">=4.5.0"
+  # - name: ansible.controller
+  #   version: ">=4.5.0"
 
   # Platform Integration (Optional)
-  - name: ansible.platform
-    version: ">=1.0.0"
+  # - name: ansible.platform
+  #   version: ">=1.0.0"
 
   # AAP Configuration as Code (Required for dynamic JT/WF creation)
-  - name: infra.aap_configuration
-    version: ">=2.0.0"
+  # - name: infra.aap_configuration
+  #   version: ">=2.0.0"
 
   # Cryptography (Required for SSL certificate remediation playbook)
-  - name: community.crypto
-    version: ">=2.0.0"
+  # - name: community.crypto
+  #   version: ">=2.0.0"
