@@ -15,7 +15,7 @@ echo -e "${GREEN}=== Testing MCP Integration with AAP ===${NC}\n"
 echo "1. Checking environment variables..."
 if [[ -z "$AAP_MCP_SERVER_URL" ]]; then
     echo -e "${RED}ERROR: AAP_MCP_SERVER_URL not set${NC}"
-    echo "Run: export AAP_MCP_SERVER_URL='http://localhost:3000/mcp'"
+    echo "Run: export AAP_MCP_SERVER_URL='https://aap.example.com:8448'"
     exit 1
 fi
 

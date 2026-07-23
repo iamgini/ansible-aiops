@@ -8,7 +8,7 @@ all:
 
   vars:
     # MCP Configuration
-    mcp_server_url: "{{ lookup('env', 'AAP_MCP_SERVER_URL') | default('http://localhost:3000/mcp', true) }}"
+    mcp_server_url: "{{ lookup('env', 'AAP_MCP_SERVER_URL') | default('https://aap.example.com:8448', true) }}"
     aap_bearer_token: "{{ lookup('env', 'AAP_BEARER_TOKEN') }}"
 
     # AAP Controller Configuration (alternative to MCP)

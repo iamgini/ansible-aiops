@@ -75,7 +75,7 @@ export CONTROLLER_PASSWORD="your_password"
 export CONTROLLER_VERIFY_SSL="false"
 
 # AAP MCP Server (Optional - for unknown events)
-export AAP_MCP_SERVER_URL="http://localhost:3000/mcp"
+export AAP_MCP_SERVER_URL="https://aap.example.com:8448"
 export AAP_BEARER_TOKEN="your_aap_oauth_token"
 
 # Git Configuration (Optional - for storing generated playbooks)

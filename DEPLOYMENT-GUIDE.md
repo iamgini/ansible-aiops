@@ -182,7 +182,7 @@ fields:
   - id: mcp_server_url
     type: string
     label: AAP MCP Server URL
-    help_text: "e.g., http://localhost:3000/mcp"
+    help_text: "e.g., https://aap.example.com:8448"
   - id: aap_bearer_token
     type: string
     label: AAP Bearer Token
@@ -233,7 +233,7 @@ env:
 - Name: `AAP MCP`
 - Credential Type: `AAP MCP`
 - Fill in values:
-  - MCP Server URL: `http://localhost:3000/mcp`
+  - MCP Server URL: `https://aap.example.com:8448`
   - AAP Bearer Token: `<your_token>`
 
 **Credential 2:**

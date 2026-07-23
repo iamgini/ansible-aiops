@@ -96,7 +96,7 @@ cp .env.example .env
 **Required environment variables:**
 ```bash
 # For MCP Integration
-export AAP_MCP_SERVER_URL="http://localhost:3000/mcp"
+export AAP_MCP_SERVER_URL="https://aap.example.com:8448"
 export AAP_BEARER_TOKEN="your_aap_bearer_token_here"
 
 # For Git Integration
@@ -113,7 +113,7 @@ See the [AAP MCP Server documentation](https://github.com/ansible/aap-mcp-server
 # Follow Red Hat documentation for your platform
 
 # Start MCP server
-# Server runs on port 3000 by default
+# Server runs on port 8448 (HTTPS) by default
 ```
 
 ## Usage
@@ -249,7 +249,7 @@ generated-playbooks/
 - **Option 2 (Open Source)**: [ansible-ai-connect-service](https://github.com/ansible/ansible-ai-connect-service) - Self-hosted, supports multiple LLM backends (OpenAI, Azure OpenAI, Watsonx, RHOAI, RHEL AI, Ollama)
 
 **Infrastructure**:
-- **[AAP MCP Server](https://github.com/ansible/aap-mcp-server)**: Model Context Protocol server for AAP (http://localhost:3000/mcp)
+- **[AAP MCP Server](https://github.com/ansible/aap-mcp-server)**: Model Context Protocol server for AAP (https://aap.example.com:8448)
 - **[Ansible Automation Platform](https://www.redhat.com/en/technologies/management/ansible/trial)**: Version 2.6+ with MCP support
 
 ### Tools
