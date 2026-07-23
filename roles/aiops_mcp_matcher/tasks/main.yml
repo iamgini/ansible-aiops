@@ -29,6 +29,7 @@
   register: mcp_response
   when: mcp_server_url | length > 0
   failed_when: false
+  no_log: true
 
 - name: Parse MCP results and find best match
   ansible.builtin.set_fact:

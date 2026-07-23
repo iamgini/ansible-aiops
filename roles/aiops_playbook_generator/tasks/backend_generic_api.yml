@@ -33,6 +33,7 @@
     generic_api_headers:
       Content-Type: "application/json"
       Authorization: "Bearer {{ generic_api_token }}"
+  no_log: true
 
 - name: Remove Authorization header when no token provided
   ansible.builtin.set_fact:
@@ -56,6 +57,7 @@
     status_code: 200
     timeout: 180
   register: generic_api_response
+  no_log: true
 
 - name: Extract generated playbook content
   ansible.builtin.set_fact:

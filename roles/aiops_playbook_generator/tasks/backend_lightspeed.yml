@@ -40,6 +40,7 @@
     status_code: 200
     timeout: 180
   register: lightspeed_response
+  no_log: true
 
 - name: Extract and validate generated playbook
   ansible.builtin.set_fact:
