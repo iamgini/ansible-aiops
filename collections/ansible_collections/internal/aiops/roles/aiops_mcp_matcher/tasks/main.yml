@@ -1,55 +1,134 @@
 ---
 # Role: aiops_mcp_matcher
-# Query AAP via MCP to find matching job templates and launch if found
+# Query AAP via MCP (ansible.mcp collection) to find matching job templates, score, and launch
+
+- name: Skip MCP query if bearer token not configured
+  ansible.builtin.set_fact:
+    mcp_completed: false
+    mcp_skip_reason: "AAP_BEARER_TOKEN not set"
+  when: lookup('env', 'AAP_BEARER_TOKEN') | length == 0
 
 - name: Skip MCP query if server URL not configured
   ansible.builtin.set_fact:
     mcp_completed: false
-    mcp_skip_reason: "MCP server URL not configured"
-  when: mcp_server_url | length == 0
+    mcp_skip_reason: "AAP_MCP_SERVER_URL not configured"
+  when:
+    - lookup('env', 'AAP_BEARER_TOKEN') | length > 0
+    - mcp_server_url | length == 0
 
 - name: MCP request details
   ansible.builtin.debug:
     msg:
-      url: "{{ mcp_server_url }}/tools/list_job_templates"
-      method: POST
+      mcp_server: "{{ mcp_server_url }}"
       event_type: "{{ event_type }}"
       service: "{{ event_service | default('') }}"
       hostname: "{{ event_host }}"
       severity: "{{ event_severity }}"
-  when: mcp_server_url | length > 0
+  when:
+    - mcp_server_url | length > 0
+    - lookup('env', 'AAP_BEARER_TOKEN') | length > 0
 
-- name: Query AAP MCP server for matching job templates
-  ansible.builtin.uri:
-    url: "{{ mcp_server_url }}/tools/list_job_templates"
-    method: POST
-    headers:
-      Authorization: "Bearer {{ lookup('env', 'AAP_BEARER_TOKEN') }}"
-      Content-Type: "application/json"
-    body_format: json
-    body:
-      params:
-        event_type: "{{ event_type }}"
-        service: "{{ event_service | default('') }}"
-        hostname: "{{ event_host }}"
-        severity: "{{ event_severity }}"
-        tags: "{{ event_tags | default([]) }}"
-    validate_certs: "{{ mcp_verify_ssl }}"
-    return_content: true
-    status_code: [200, 404]
-    timeout: 30
-  register: mcp_response
-  when: mcp_server_url | length > 0
-  failed_when: false
+- name: Query all job templates from AAP via MCP
+  ansible.mcp.run_tool:
+    server_url: "{{ mcp_server_url }}"
+    auth_token: "{{ lookup('env', 'AAP_BEARER_TOKEN') }}"
+    tool_name: "controller_api_v2_job_templates_list"
+    tool_arguments: {}
+  register: job_templates_result
+  when:
+    - mcp_server_url | length > 0
+    - lookup('env', 'AAP_BEARER_TOKEN') | length > 0
   no_log: true
 
-- name: Parse MCP results and find best match
+- name: Parse job templates from MCP response
   ansible.builtin.set_fact:
-    best_match: "{{ mcp_response.json.content[0].templates | sort(attribute='score', reverse=true) | first }}"
+    all_job_templates: "{{ job_templates_result.result.results | default([]) }}"
   when:
-    - mcp_response is defined
-    - mcp_response.status == 200
-    - mcp_response.json.content[0].templates | length > 0
+    - job_templates_result is defined
+    - job_templates_result is not skipped
+    - job_templates_result.result is defined
+
+- name: Templates retrieved
+  ansible.builtin.debug:
+    msg: "{{ all_job_templates | default([]) | length }} templates found via MCP"
+  when: all_job_templates is defined
+
+- name: Find matching job templates based on event attributes
+  ansible.builtin.set_fact:
+    matched_templates: >-
+      {{
+        all_job_templates | selectattr('name', 'defined') | list |
+        selectattr('name', 'search', event_type | regex_escape) | list +
+        all_job_templates | selectattr('description', 'defined') | list |
+        selectattr('description', 'search', event_service | default('') | regex_escape) | list +
+        all_job_templates | selectattr('name', 'defined') | list |
+        selectattr('name', 'search', event_host | regex_escape) | list
+      }}
+  when:
+    - all_job_templates is defined
+    - all_job_templates | length > 0
+
+- name: Remove duplicate matches
+  ansible.builtin.set_fact:
+    unique_matched_templates: "{{ matched_templates | unique | list }}"
+  when: matched_templates is defined
+
+- name: Score and rank job templates by relevance
+  ansible.builtin.set_fact:
+    scored_templates: >-
+      {% set templates = [] %}
+      {% for template in (unique_matched_templates | default([])) %}
+        {% set score = 0 %}
+        {% set name_lower = (template.name | default('')) | lower %}
+        {% set desc_lower = (template.description | default('')) | lower %}
+        {% set event_type_lower = event_type | lower %}
+        {% set event_service_lower = (event_service | default('')) | lower %}
+        {% set event_host_lower = (event_host | default('')) | lower %}
+        {% if event_type_lower in name_lower %}
+          {% set score = score + 50 %}
+        {% endif %}
+        {% if event_service_lower and event_service_lower in name_lower %}
+          {% set score = score + 40 %}
+        {% endif %}
+        {% if event_host_lower and event_host_lower in name_lower %}
+          {% set score = score + 30 %}
+        {% endif %}
+        {% if event_type_lower in desc_lower %}
+          {% set score = score + 20 %}
+        {% endif %}
+        {% if event_service_lower and event_service_lower in desc_lower %}
+          {% set score = score + 20 %}
+        {% endif %}
+        {% for tag in (event_tags | default([])) %}
+          {% if tag | lower in name_lower or tag | lower in desc_lower %}
+            {% set score = score + 10 %}
+          {% endif %}
+        {% endfor %}
+        {% if event_severity | default('') | lower == 'critical' and ('critical' in name_lower or 'emergency' in name_lower) %}
+          {% set score = score + 15 %}
+        {% elif event_severity | default('') | lower == 'high' and ('high' in name_lower or 'urgent' in name_lower) %}
+          {% set score = score + 15 %}
+        {% endif %}
+        {% set _ = templates.append({
+          'id': template.id,
+          'name': template.name,
+          'description': template.description | default(''),
+          'project': template.summary_fields.project.name | default(''),
+          'inventory': template.summary_fields.inventory.name | default(''),
+          'score': score,
+          'url': template.url | default('')
+        }) %}
+      {% endfor %}
+      {{ templates | sort(attribute='score', reverse=True) }}
+  when: unique_matched_templates is defined and unique_matched_templates | length > 0
+
+- name: Set best match from scored templates
+  ansible.builtin.set_fact:
+    best_match: "{{ scored_templates | first }}"
+  when:
+    - scored_templates is defined
+    - scored_templates | length > 0
+    - (scored_templates | first).score >= mcp_minimum_score
 
 - name: Launch AAP job template (high confidence match)
   ansible.controller.job_launch:
@@ -62,7 +141,6 @@
     extra_vars:
       event_type: "{{ event_type }}"
       event_severity: "{{ event_severity }}"
-    wait: false
   register: aap_job
   when:
     - best_match is defined
