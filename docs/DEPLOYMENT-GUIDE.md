@@ -196,7 +196,42 @@ env:
   AAP_BEARER_TOKEN: "{{ aap_bearer_token }}"
 ```
 
-**Credential Type 2: Git SCM**
+**Credential Type 2: Generic AI API**
+
+**AAP UI → Credential Types → Add:**
+
+**Name:** `Generic AI API`
+
+**Input Configuration:**
+```yaml
+fields:
+  - id: generic_ai_api_token
+    type: string
+    label: AI API Token
+    secret: true
+    help_text: "Bearer token for the AI API (OpenAI, Azure OpenAI, vLLM, Ollama, etc.)"
+  - id: generic_ai_api_url
+    type: string
+    label: AI API URL
+    help_text: "OpenAI-compatible chat completions endpoint URL"
+  - id: generic_api_model
+    type: string
+    label: AI Model
+    help_text: "Model name (e.g., gpt-4, gpt-4o, llama3, mistral)"
+required:
+  - generic_ai_api_token
+  - generic_ai_api_url
+```
+
+**Injector Configuration:**
+```yaml
+env:
+  GENERIC_AI_API_TOKEN: "{{ generic_ai_api_token }}"
+  GENERIC_AI_API_URL: "{{ generic_ai_api_url }}"
+  GENERIC_API_MODEL: "{{ generic_api_model }}"
+```
+
+**Credential Type 3: Git SCM**
 
 **AAP UI → Credential Types → Add:**
 
@@ -238,6 +273,14 @@ env:
   - AAP Bearer Token: `<your_token>`
 
 **Credential 2:**
+- Name: `Generic AI API`
+- Credential Type: `Generic AI API`
+- Fill in values:
+  - AI API Token: `sk-...` (OpenAI), or your vLLM/Ollama token
+  - AI API URL: `https://api.openai.com/v1/chat/completions` (or local endpoint)
+  - AI Model: `gpt-4` (or `llama3`, `mistral`, etc.)
+
+**Credential 3:**
 - Name: `Git SCM`
 - Credential Type: `Git SCM`
 - Fill in values:
@@ -256,6 +299,7 @@ env:
 - Credentials:
   - `Machine Credential` (localhost)
   - `AAP MCP`
+  - `Generic AI API` (when using `ai_backend=generic_api`)
   - `Git SCM`
 - Execution Environment: Default
 - Variables:

@@ -14,13 +14,13 @@ This project implements **intelligent event-driven automation** using:
 
 ### 1. MCP-Based Job Template Matching
 
-The centerpiece is the `internal.aiops.aiops_mcp_matcher` role, called from `playbooks/intelligent-aiops-workflow.yml`:
-- Uses `ansible.mcp.mcp` connection plugin (dynamically creates MCP host via `add_host` + `delegate_to`)
-- Queries AAP via `ansible.mcp.run_tool` with `name: job_templates_list`
-- Generates MCP manifest at runtime from `AAP_MCP_SERVER_URL` env var (no static manifest file)
-- Scores templates based on event attributes (type, service, hostname, severity, tags)
+The centerpiece is `playbooks/intelligent-aiops-workflow.yml` using a **3-play architecture**:
+- **Play 1** (localhost): Validates config, generates MCP manifest at runtime, adds `aap_mcp` host via `add_host`
+- **Play 2** (aap_mcp): Queries AAP via `ansible.mcp.run_tool` with `name: job_templates_list`, stores results on localhost via `delegate_facts`
+- **Play 3** (localhost): Runs `internal.aiops.aiops_mcp_matcher` role for scoring, launching, AI generation, and CaC
+- Uses `ansible.mcp.mcp` connection plugin — MCP host is targeted directly (not via `delegate_to`)
+- Bearer token injected via `environment: MCP_BEARER_TOKEN` for AAP credential type compatibility
 - Auto-launches highest-scoring template via `ansible.controller.job_launch` if score >= threshold
-- Integrates seamlessly with EDA rulebooks
 
 **Scoring Algorithm:**
 - Event type in template name: **+50 points**
@@ -156,6 +156,8 @@ ansible-aiops/
 ├── inventory.yml                         # Inventory with MCP vars
 ├── generate-and-push.yml                # Code Assistant integration playbook
 ├── test-mcp-integration.sh              # Automated testing
+├── deploy/
+│   └── aap-credential-types.yml         # Custom AAP credential types (MCP, AI API, Git)
 ├── .env.example                         # Environment template
 ├── .gitignore                           # Git ignore rules
 ├── QUICKSTART.md                        # 5-minute quick start
@@ -174,6 +176,26 @@ This project depends on:
 - **ansible.platform** (≥1.0.0) - AAP platform integration
 
 Install all: `ansible-galaxy collection install -r requirements.yml`
+
+## Deploying Custom Credential Types
+
+The project includes 3 custom AAP credential types in `deploy/aap-credential-types.yml`:
+
+| Credential Type | Injected Env Vars | Purpose |
+|---|---|---|
+| AIOps - MCP Bearer Token | `MCP_BEARER_TOKEN`, `AAP_MCP_SERVER_URL` | MCP server authentication |
+| AIOps - Generic AI API | `GENERIC_AI_API_TOKEN`, `GENERIC_AI_API_URL`, `GENERIC_API_MODEL` | AI playbook generation backend |
+| AIOps - Git Token | `GIT_TOKEN`, `GIT_REMOTE_URL`, `GIT_USERNAME`, `GIT_EMAIL` | Generated playbook git push |
+
+Deploy to AAP:
+```bash
+ansible-navigator run deploy/aap-credential-types.yml -m stdout \
+  -e "controller_host=https://aap.example.com" \
+  -e "controller_username=admin" \
+  -e "controller_password=secret"
+```
+
+After deploying, create credential instances in AAP UI and attach them to the AIOps job template.
 
 ## Development Workflows
 
