@@ -2,14 +2,15 @@
 # Ansible Collection Requirements for AIOps Execution Environment
 
 collections:
-  # Event-Driven Automation (Required for rulebooks)
-  # - name: ansible.eda
-  #   version: ">=1.0.0"
-
   # Model Context Protocol Client (Required for MCP integration)
   - name: ansible.mcp
     source: https://aapaio.lab.gineesh.com/api/galaxy/content/rh-certified/
     # version: ">=1.0.0"
+
+  # Event-Driven Automation (Required for rulebooks)
+  # - name: ansible.eda
+  #   version: ">=1.0.0"
+
 
   # Ansible Utilities (Dependency of ansible.mcp)
   # - name: ansible.utils
