@@ -23,7 +23,7 @@
       condition: event.payload.debug is defined and event.payload.debug == true
       action:
         debug:
-          msg: "Hello"
+          msg: "{{ event.payload }}"
 
     # =========================================================================
     # HELLO AAP: Trigger Hello World Job Template

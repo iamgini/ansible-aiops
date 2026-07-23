@@ -54,13 +54,13 @@ fi
 
 # Run the playbook with sample event data
 echo "4. Testing playbook with sample event..."
-echo -e "${YELLOW}Running: find-matching-job-template.yml${NC}\n"
+echo -e "${YELLOW}Running: intelligent-aiops-workflow.yml (uses internal.aiops.aiops_mcp_matcher role)${NC}\n"
 
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
     -e "event_type=disk_alert" \
-    -e "event_source=monitoring_system" \
+    -e "event_description='Disk usage at 95%'" \
     -e "event_service=nginx" \
-    -e "event_hostname=web-server-01" \
+    -e "event_host=web-server-01" \
     -e "event_severity=high" \
     -e 'event_tags=["web","production","disk"]' \
     -v

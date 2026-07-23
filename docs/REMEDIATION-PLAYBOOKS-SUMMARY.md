@@ -13,7 +13,7 @@ playbooks/
 
 archive/old-playbooks/                        📦 Archived
 ├── execute-aap-job-template.yml             (No longer needed)
-├── find-matching-job-template.yml           (Superseded)
+├── find-matching-job-template.yml           (Superseded by internal.aiops.aiops_mcp_matcher role)
 └── find-template-on-unmatched-event.yml     (Old rulebook)
 ```
 
@@ -21,7 +21,7 @@ archive/old-playbooks/                        📦 Archived
 
 ### ❌ Removed (Archived)
 1. `execute-aap-job-template.yml` - No longer needed (rulebook uses `run_job_template` directly)
-2. `find-matching-job-template.yml` - Superseded by inline MCP logic in `intelligent-aiops-workflow.yml`
+2. `find-matching-job-template.yml` - Superseded by `internal.aiops.aiops_mcp_matcher` role (uses `ansible.mcp.run_tool`)
 
 ### ✅ Created
 4 production-ready remediation playbooks for AAP job templates

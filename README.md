@@ -137,14 +137,15 @@ ansible-navigator run generate-and-push.yml -m stdout \
 ansible-navigator run generate-and-push.yml -m stdout --skip-tags git
 ```
 
-### MCP-Based Job Template Matching
+### Intelligent AIOps Workflow (MCP + AI)
 
-**Find matching job templates for an event:**
+**Run the full workflow (MCP template matching + AI fallback):**
 ```bash
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=disk_alert" \
+  -e "event_description='Disk usage at 95%'" \
   -e "event_service=nginx" \
-  -e "event_hostname=web-server-01" \
+  -e "event_host=web-server-01" \
   -e "event_severity=high" \
   -e 'event_tags=["web","production"]'
 ```
@@ -176,12 +177,12 @@ See [Testing with curl - Sample Events](tests/TESTING-CURL-EVENTS.md) for all te
 3. Saves playbook to `generated-playbooks/playbooks/`
 4. Commits and pushes to Git repository
 
-### MCP Job Template Matching
+### MCP Job Template Matching (via `internal.aiops.aiops_mcp_matcher` role)
 1. Receives event from EDA or direct invocation
-2. Queries AAP via MCP server for available job templates
+2. Queries AAP via MCP using `ansible.mcp.run_tool` (`controller_api_v2_job_templates_list`)
 3. Matches templates against event attributes (type, service, hostname, severity, tags)
-4. Scores and ranks templates by relevance
-5. Returns top recommendations or auto-launches best match
+4. Scores and ranks templates by relevance (0-200+ points)
+5. Auto-launches best match via `ansible.controller.job_launch` if score >= threshold
 
 ### Event-Driven Flow
 ```
@@ -253,24 +254,26 @@ ansible-navigator run generate-and-push.yml -m stdout \
   -e "target_host=app-server-01"
 ```
 
-### MCP Template Matching
+### More Examples
 
 **Database performance issue:**
 ```bash
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=database_slow" \
+  -e "event_description='Database query latency exceeds threshold'" \
   -e "event_service=postgresql" \
-  -e "event_hostname=db-primary-01" \
+  -e "event_host=db-primary-01" \
   -e "event_severity=critical" \
   -e 'event_tags=["database","production","performance"]'
 ```
 
 **Security alert:**
 ```bash
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=security_breach" \
+  -e "event_description='Intrusion detected on firewall'" \
   -e "event_service=firewall" \
-  -e "event_hostname=fw-01" \
+  -e "event_host=fw-01" \
   -e "event_severity=critical" \
   -e 'event_tags=["security","network","intrusion"]'
 ```

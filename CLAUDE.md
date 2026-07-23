@@ -14,8 +14,8 @@ This project implements **intelligent event-driven automation** using:
 
 ### 1. MCP-Based Job Template Matching
 
-The centerpiece is `playbooks/find-matching-job-template.yml`:
-- Queries AAP via MCP server for all accessible job templates
+The centerpiece is the `internal.aiops.aiops_mcp_matcher` role, called from `playbooks/intelligent-aiops-workflow.yml`:
+- Queries AAP via `ansible.mcp.run_tool` (`controller_api_v2_job_templates_list`)
 - Scores templates based on event attributes (type, service, hostname, severity, tags)
 - Returns top 5 recommendations OR auto-launches highest-scoring template
 - Integrates seamlessly with EDA rulebooks
@@ -90,10 +90,11 @@ cp .env.example .env
 ./test-mcp-integration.sh
 
 # Manual playbook execution with sample event
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=disk_alert" \
+  -e "event_description='Disk usage at 95%'" \
   -e "event_service=nginx" \
-  -e "event_hostname=web-server-01" \
+  -e "event_host=web-server-01" \
   -e "event_severity=high" \
   -e 'event_tags=["web","production"]'
 ```
@@ -141,7 +142,7 @@ ansible-navigator run generate-and-push.yml -m stdout --skip-tags git
 ```
 ansible-aiops/
 ├── playbooks/
-│   └── find-matching-job-template.yml    # Core MCP template finder
+│   └── intelligent-aiops-workflow.yml     # Orchestrator (MCP matcher + AI generator + CaC)
 ├── rulebooks/
 │   └── find-template-on-unmatched-event.yml  # EDA rulebook
 ├── docs/
@@ -176,7 +177,7 @@ Install all: `ansible-galaxy collection install -r requirements.yml`
 
 ### Modifying the Scoring Algorithm
 
-Edit `playbooks/find-matching-job-template.yml`, find the "Score and rank" task:
+Edit `collections/ansible_collections/internal/aiops/roles/aiops_mcp_matcher/tasks/main.yml`, find the "Score and rank" task:
 
 ```yaml
 - name: Score and rank job templates by relevance
@@ -198,7 +199,7 @@ Edit `playbooks/find-matching-job-template.yml`, find the "Score and rank" task:
 
 Test changes:
 ```bash
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout -e "event_type=test" -vv
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout -e "event_type=test" -e "event_description=test" -e "event_host=test" -vv
 ```
 
 ### Adding New EDA Rules
@@ -357,13 +358,13 @@ Example safe auto-launch:
 
 ```bash
 # Syntax check
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout --syntax-check
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout --syntax-check
 
 # Check mode (won't actually query AAP)
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout --check
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout --check
 
 # Verbose output for debugging
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout -vvv
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout -vvv
 ```
 
 ### Integration Testing

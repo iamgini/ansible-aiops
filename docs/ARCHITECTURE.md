@@ -111,7 +111,7 @@ Monitoring System → EDA Webhook/Kafka/Source → EDA Rulebook
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  find-matching-job-template.yml                            │
+│  internal.aiops.aiops_mcp_matcher role                      │
 ├────────────────────────────────────────────────────────────┤
 │  Step 1: Query MCP Server                                  │
 │    ansible.mcp.run_tool:                                   │

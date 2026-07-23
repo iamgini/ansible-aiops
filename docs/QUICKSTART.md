@@ -65,10 +65,11 @@ If successful, you'll see:
 Find matching templates for a specific event:
 
 ```bash
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=disk_alert" \
+  -e "event_description='Disk usage at 95%'" \
   -e "event_service=nginx" \
-  -e "event_hostname=web-server-01" \
+  -e "event_host=web-server-01" \
   -e "event_severity=high" \
   -e 'event_tags=["web","production"]'
 ```
@@ -129,15 +130,17 @@ The rulebook will:
 
 ```bash
 # Disk space alert
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=disk_full" \
-  -e "event_hostname=db-server-01" \
+  -e "event_description='Disk at 98% on /var'" \
+  -e "event_host=db-server-01" \
   -e "event_severity=critical"
 
 # High CPU usage
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=high_cpu" \
-  -e "event_hostname=app-server-03" \
+  -e "event_description='CPU usage at 95%'" \
+  -e "event_host=app-server-03" \
   -e "event_severity=high"
 ```
 
@@ -145,16 +148,19 @@ ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
 
 ```bash
 # Service down
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=service_down" \
+  -e "event_description='PostgreSQL service stopped'" \
   -e "event_service=postgresql" \
-  -e "event_hostname=db-primary-01" \
+  -e "event_host=db-primary-01" \
   -e "event_severity=critical"
 
 # Slow response time
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=slow_response" \
+  -e "event_description='API response time exceeds 5s'" \
   -e "event_service=api" \
+  -e "event_host=api-server-01" \
   -e 'event_tags=["backend","production"]'
 ```
 
@@ -162,9 +168,11 @@ ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
 
 ```bash
 # Security breach detected
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=security_breach" \
+  -e "event_description='Intrusion detected on firewall'" \
   -e "event_service=firewall" \
+  -e "event_host=fw-01" \
   -e "event_severity=critical" \
   -e 'event_tags=["security","intrusion"]'
 ```
@@ -185,7 +193,7 @@ The algorithm assigns points based on matches:
 
 ### Adjust Scoring Weights
 
-Edit `playbooks/find-matching-job-template.yml` and modify the scoring section:
+Edit `collections/ansible_collections/internal/aiops/roles/aiops_mcp_matcher/tasks/main.yml` and modify the scoring section:
 
 ```yaml
 # Example: Increase service name importance

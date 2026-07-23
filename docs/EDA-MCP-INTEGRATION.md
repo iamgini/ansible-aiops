@@ -80,14 +80,16 @@ ansible-galaxy collection install -r requirements.yml
 - `ansible.eda` - Event-driven automation
 - `ansible.controller` - AAP controller interaction
 
-### 3. Playbook: Find Matching Job Template
+### 3. MCP Matcher Role (`internal.aiops.aiops_mcp_matcher`)
 
-Located at: `playbooks/find-matching-job-template.yml`
+Located at: `collections/ansible_collections/internal/aiops/roles/aiops_mcp_matcher/`
+
+Called from: `playbooks/intelligent-aiops-workflow.yml`
 
 **How it works:**
 
-1. **Receives event data** from EDA via `ansible_eda.event` variable
-2. **Queries AAP** via MCP server for all job templates
+1. **Receives event data** from parent playbook or EDA
+2. **Queries AAP** via `ansible.mcp.run_tool` (`controller_api_v2_job_templates_list`)
 3. **Matches templates** against event attributes:
    - Event type
    - Service name
@@ -189,10 +191,11 @@ Event: disk_alert from monitoring_system
 You can run the playbook directly for testing:
 
 ```bash
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout \
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=disk_alert" \
+  -e "event_description='Disk usage at 95%'" \
   -e "event_service=nginx" \
-  -e "event_hostname=web-server-01" \
+  -e "event_host=web-server-01" \
   -e "event_severity=high" \
   -e 'event_tags=["web","production"]'
 ```
@@ -226,7 +229,7 @@ curl -X POST https://aap.example.com/api/v2/tokens/ \
 
 ### Custom Scoring Logic
 
-Modify the scoring section in `find-matching-job-template.yml`:
+Modify the scoring section in the `aiops_mcp_matcher` role (`collections/ansible_collections/internal/aiops/roles/aiops_mcp_matcher/tasks/main.yml`):
 
 ```yaml
 - name: Score templates with custom logic
@@ -289,7 +292,7 @@ images:
 
 ```bash
 # Test MCP server connectivity
-ansible-navigator run playbooks/find-matching-job-template.yml -m stdout -vvv
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout -vvv
 
 # Check MCP tools available
 ansible -m ansible.mcp.tools_info \

@@ -150,7 +150,7 @@ inventory: "All Servers"
 
 ### Adding Custom Scoring Rules
 
-Edit `playbooks/find-matching-job-template.yml` and modify the scoring section:
+Edit the `aiops_mcp_matcher` role (`collections/ansible_collections/internal/aiops/roles/aiops_mcp_matcher/tasks/main.yml`) and modify the scoring section:
 
 ```yaml
 - name: Score templates with custom logic
