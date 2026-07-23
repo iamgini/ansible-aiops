@@ -27,7 +27,14 @@
       "Bash(curl *)",
       "Bash(python3 -m json.tool)",
       "mcp__aap-mcp-job-mgmt__job_templates_list",
-      "Bash(pre-commit install *)"
+      "Bash(pre-commit install *)",
+      "mcp__aap-mcp-platform-config__config_retrieve",
+      "mcp__aap-mcp-platform-config__gateway-settings_list",
+      "mcp__aap-mcp-platform-config__settings_retrieve",
+      "mcp__aap-mcp-platform-config__settings_getter",
+      "mcp__aap-mcp-job-mgmt__activation_instances_list",
+      "mcp__aap-mcp-system-monitoring__status_retrieve",
+      "mcp__aap-mcp-platform-config__controller-settings_list"
     ]
   }
 }
