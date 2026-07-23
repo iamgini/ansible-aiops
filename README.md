@@ -167,43 +167,7 @@ ansible-rulebook \
 
 **Send test events via webhook:**
 
-Debug test (prints "Hello" in EDA output):
-```bash
-curl -X POST http://localhost:5000/webhook \
-  -H "Content-Type: application/json" \
-  -d '{"debug": true}'
-```
-
-Hello AAP (launches "Hello World" job template):
-```bash
-curl -X POST http://localhost:5000/webhook \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Hello AAP"}'
-```
-
-Hello AAP with event details:
-```bash
-curl -X POST http://localhost:5000/webhook \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Hello AAP", "source": "prometheus", "host": "web-01", "severity": "info"}'
-```
-
-Disk alert event:
-```bash
-curl -X POST http://localhost:5000/webhook \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "disk_alert",
-    "source": "monitoring_system",
-    "payload": {
-      "hostname": "web-server-01",
-      "service": "nginx",
-      "severity": "high",
-      "usage": 95,
-      "tags": ["web", "production"]
-    }
-  }'
-```
+See [Testing with curl - Sample Events](TESTING-CURL-EVENTS.md) for all test cases including debug, known events (Cases 1-4), unknown events (Case 5), and Elastic-style alerts.
 
 ## Architecture
 

@@ -380,51 +380,7 @@ Then attach both credentials (`AAP MCP` and `Git SCM`) to Job Template 5.
 
 ## Testing Workflow
 
-### Test Case 1: Known Event (Disk Full)
-
-```bash
-# Send event to EDA webhook
-curl -X POST https://your-eda-controller:5000/webhook \
-  -H "Content-Type: application/json" \
-  -d '{
-    "alert_name": "disk_usage_high",
-    "host": "web-server-01",
-    "severity": "high",
-    "partition": "/var",
-    "value": 95
-  }'
-```
-
-**Expected:**
-1. EDA receives event
-2. Matches "High Disk Usage - Launch AAP Job Template"
-3. Launches `Remediate Disk Space` job template
-4. Job runs on `web-server-01`
-5. Disk cleanup executed
-
-### Test Case 5: Unknown Event (AI Intelligence)
-
-```bash
-curl -X POST https://your-eda-controller:5000/webhook \
-  -H "Content-Type: application/json" \
-  -d '{
-    "event_type": "database_slow_query",
-    "host": "db-server-03",
-    "severity": "medium",
-    "service": "postgresql",
-    "description": "Queries taking >5 seconds"
-  }'
-```
-
-**Expected:**
-1. EDA receives event
-2. No match in Cases 1-4
-3. Falls through to Case 5
-4. Launches `AI Intelligence - Unknown Event Remediation` job template
-5. Job executes `intelligent-aiops-workflow.yml`:
-   - Queries MCP for templates
-   - Calls Maya to generate playbook
-   - Pushes to Git
+See [Testing with curl - Sample Events](TESTING-CURL-EVENTS.md) for all test cases (debug, Cases 1-5, Elastic-style alerts).
 
 ---
 

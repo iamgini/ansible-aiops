@@ -339,35 +339,7 @@ Webhook URL: https://your-eda-controller:5000/webhook
 
 #### Step 4.2: Test End-to-End Flow
 
-**Test Case 1 (Known Event):**
-```bash
-curl -X POST https://your-eda-controller:5000/webhook \
-  -H "Content-Type: application/json" \
-  -d @test-events/case1-disk-full.json
-```
-
-**Verify:**
-1. EDA receives event (check logs)
-2. Rulebook matches "High Disk Usage"
-3. Launches `Remediate Disk Space` job template
-4. Job runs on target host
-5. Disk cleanup executed
-
-**Test Case 5 (Unknown Event):**
-```bash
-curl -X POST https://your-eda-controller:5000/webhook \
-  -H "Content-Type: application/json" \
-  -d @test-events/case-unknown-event.json
-```
-
-**Verify:**
-1. EDA receives event
-2. No match in Cases 1-4
-3. Launches `AI Intelligence` job template
-4. Job queries MCP (if configured)
-5. Calls Maya API to generate playbook
-6. Pushes playbook to Git
-7. Check Git repository for new playbook
+See [Testing with curl - Sample Events](TESTING-CURL-EVENTS.md) for all test cases (debug, Cases 1-5, Elastic-style alerts).
 
 ## Monitoring & Operations
 
