@@ -196,22 +196,23 @@ env:
   AAP_BEARER_TOKEN: "{{ aap_bearer_token }}"
 ```
 
-**Credential Type 2: Git**
+**Credential Type 2: Git SCM**
 
 **AAP UI → Credential Types → Add:**
 
-**Name:** `Git`
+**Name:** `Git SCM`
 
 **Input Configuration:**
 ```yaml
 fields:
-  - id: git_token
-    type: string
-    label: GitHub Token
-    secret: true
   - id: git_username
     type: string
     label: Git Username
+  - id: git_token
+    type: string
+    label: Git Token or Password
+    help_text: "Personal access token (GitHub/GitLab/Bitbucket) or password"
+    secret: true
   - id: git_email
     type: string
     label: Git Email
@@ -237,11 +238,11 @@ env:
   - AAP Bearer Token: `<your_token>`
 
 **Credential 2:**
-- Name: `Git`
-- Credential Type: `Git`
+- Name: `Git SCM`
+- Credential Type: `Git SCM`
 - Fill in values:
-  - Git Token: `ghp_your_github_token`
   - Git Username: `iamgini`
+  - Git Token or Password: `ghp_...` (GitHub), `glpat-...` (GitLab), or app password (Bitbucket)
   - Git Email: `your_email@example.com`
 
 #### Step 2.4: Create Job Template 5
@@ -255,7 +256,7 @@ env:
 - Credentials:
   - `Machine Credential` (localhost)
   - `AAP MCP`
-  - `Git`
+  - `Git SCM`
 - Execution Environment: Default
 - Variables:
   ```yaml

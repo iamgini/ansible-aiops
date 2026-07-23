@@ -346,19 +346,20 @@ env:
   AAP_BEARER_TOKEN: "{{ aap_bearer_token }}"
 ```
 
-**Credential Type 2: Git**
+**Credential Type 2: Git SCM**
 
 **Input Configuration:**
 ```yaml
 fields:
-  - id: git_token
-    type: string
-    label: Git Token
-    secret: true
   - id: git_username
     type: string
     label: Git Username
-    default: your_github_username
+    default: your_git_username
+  - id: git_token
+    type: string
+    label: Git Token or Password
+    help_text: "Personal access token (GitHub/GitLab/Bitbucket) or password"
+    secret: true
   - id: git_email
     type: string
     label: Git Email
@@ -373,7 +374,7 @@ env:
   GIT_EMAIL: "{{ git_email }}"
 ```
 
-Then attach both credentials (`AAP MCP` and `Git`) to Job Template 5.
+Then attach both credentials (`AAP MCP` and `Git SCM`) to Job Template 5.
 
 ---
 
