@@ -11,8 +11,8 @@
       - event_type is defined
       - event_host is defined
       - aap_hostname is defined
-      - aap_password | length > 0
-    fail_msg: "Missing required variables for CaC Manager"
+      - aap_bearer_token | length > 0 or aap_password | length > 0
+    fail_msg: "Missing required variables for CaC Manager (need AAP_BEARER_TOKEN or CONTROLLER_PASSWORD)"
 
 - name: Authenticate to AAP
   ansible.builtin.include_tasks: authenticate.yml
@@ -33,7 +33,9 @@
     force_basic_auth: true
     validate_certs: "{{ aap_validate_certs }}"
     status_code: 204
-  when: aap_oauthtoken_url is defined
+  when:
+    - aap_oauthtoken_url is defined
+    - aap_bearer_token | length == 0
 
 - name: Clean up temp CaC directory
   ansible.builtin.file:

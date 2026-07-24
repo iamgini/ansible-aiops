@@ -2,8 +2,9 @@
 # Default variables for aiops_cac_manager role
 # Dynamically creates AAP Job Templates and Workflow Templates for AI-generated playbooks
 
-# AAP Connection
-aap_hostname: "{{ lookup('env', 'CONTROLLER_HOST') | default('https://aap.example.com', true) }}"
+# AAP Connection (bearer token preferred, falls back to username/password)
+aap_bearer_token: "{{ lookup('env', 'AAP_BEARER_TOKEN') | default(lookup('env', 'MCP_BEARER_TOKEN'), true) | default('', true) }}"
+aap_hostname: "{{ lookup('env', 'CONTROLLER_HOST') | default(lookup('env', 'AAP_MCP_SERVER_URL') | default('') | urlsplit('scheme') + '://' + lookup('env', 'AAP_MCP_SERVER_URL') | default('https://aap.example.com') | urlsplit('hostname'), true) }}"
 aap_username: "{{ lookup('env', 'CONTROLLER_USERNAME') | default('admin', true) }}"
 aap_password: "{{ lookup('env', 'CONTROLLER_PASSWORD') | default('', true) }}"
 aap_validate_certs: "{{ lookup('env', 'CONTROLLER_VERIFY_SSL') | default('false', true) }}"
@@ -41,10 +42,3 @@ aap_sync_project: "{{ lookup('env', 'AAP_SYNC_PROJECT') | default('true', true) 
 
 # Temp directory for rendered CaC templates
 aap_cac_temp_dir: "/tmp/aiops-cac-{{ lookup('pipe', 'date +%Y%m%d-%H%M%S') }}"
-
-# Input variables (passed from aiops_playbook_generator role):
-# ai_playbook_filename - the generated playbook filename
-# ai_git_pushed - whether git push succeeded
-# ai_git_review_branch - the review branch name
-# event_type, event_host, event_severity, event_description
-# git_remote_url, git_default_branch, git_playbook_dir
