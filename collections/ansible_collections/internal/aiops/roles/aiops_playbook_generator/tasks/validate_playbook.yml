@@ -32,7 +32,7 @@
 
 - name: Run ansible-playbook syntax check
   ansible.builtin.command:
-    cmd: "ansible-playbook {{ validate_temp_dir.path }}/{{ playbook_filename }} --syntax-check"
+    cmd: "ansible-playbook {{ validate_temp_dir.path }}/{{ playbook_filename }} --syntax-check -i localhost,"
   register: syntax_check_result
   changed_when: false
   failed_when: false
