@@ -5,8 +5,8 @@
 - name: Validate AI backend selection
   ansible.builtin.assert:
     that:
-      - ai_backend in ['lightspeed', 'generic_api', 'coder']
-    fail_msg: "Invalid ai_backend: {{ ai_backend }}. Must be 'lightspeed', 'generic_api', or 'coder'"
+      - ai_backend in ['generic_api', 'lightspeed_api', 'coder_api']
+    fail_msg: "Invalid ai_backend: {{ ai_backend }}. Must be 'generic_api', 'lightspeed_api', or 'coder_api'"
 
 - name: Initialize retry state
   ansible.builtin.set_fact:

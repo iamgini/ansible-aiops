@@ -68,5 +68,5 @@
 - name: Set generation results
   ansible.builtin.set_fact:
     ai_generation_completed: "{{ ai_validation_passed | bool }}"
-    ai_backend_used: "lightspeed"
+    ai_backend_used: "lightspeed_api"
     ai_playbook_filename: "{{ playbook_filename }}"

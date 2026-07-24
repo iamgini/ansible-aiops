@@ -111,7 +111,7 @@
 - name: Set generation results
   ansible.builtin.set_fact:
     ai_generation_completed: true
-    ai_backend_used: "coder"
+    ai_backend_used: "coder_api"
     ai_playbook_filename: "{{ playbook_filename }}"
     ai_workspace_name: "{{ workspace_name if not (auto_cleanup_workspace | bool) else 'deleted' }}"
     ai_git_pushed: true
