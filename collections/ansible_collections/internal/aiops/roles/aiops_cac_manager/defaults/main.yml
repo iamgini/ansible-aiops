@@ -10,7 +10,7 @@ aap_password: "{{ lookup('env', 'CONTROLLER_PASSWORD') | default('', true) }}"
 aap_validate_certs: "{{ lookup('env', 'CONTROLLER_VERIFY_SSL') | default('false', true) }}"
 
 # AAP Organization
-aap_organization: "{{ lookup('env', 'AAP_ORGANIZATION') | default('Default', true) }}"
+aap_organization: "{{ lookup('env', 'AAP_ORGANIZATION') | default('AIOps', true) }}"
 
 # AAP Project (must point to the AI-generated playbooks repo)
 aap_project: "{{ lookup('env', 'AAP_AI_PROJECT') | default('AIOps-AI-Generated-Playbooks', true) }}"
