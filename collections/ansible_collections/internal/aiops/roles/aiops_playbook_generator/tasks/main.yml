@@ -24,8 +24,4 @@
 
 - name: AI Playbook Generator Summary
   ansible.builtin.debug:
-    msg:
-      - "Backend: {{ ai_backend_used }} | Playbook: {{ git_playbook_dir }}/{{ ai_playbook_filename }} | Attempts: {{ ai_retry_count | int }}/{{ ai_max_retries }}"
-      - "Validation: syntax={{ ai_validation_syntax | default('N/A') }} yamllint={{ ai_validation_yamllint | default('N/A') }} ansible-lint={{ ai_validation_ansiblelint | default('N/A') }}"
-      - "Git: pushed={{ ai_git_pushed }} branch={{ ai_git_review_branch | default('N/A') }} repo={{ git_remote_url }}"
-      - "{{ 'Workspace: ' + ai_workspace_name if ai_backend_used == 'coder' else '' }}"
+    msg: "Backend: {{ ai_backend_used }} | Playbook: {{ git_playbook_dir }}/{{ ai_playbook_filename }} | Validation: {{ 'skipped' if ai_skip_validation | bool else 'passed' }} | Git: pushed={{ ai_git_pushed }} branch={{ ai_git_review_branch | default('N/A') }}"

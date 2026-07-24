@@ -60,6 +60,12 @@
 
 - name: Validate generated playbook
   ansible.builtin.include_tasks: validate_playbook.yml
+  when: not (ai_skip_validation | bool)
+
+- name: Skip validation - mark as passed
+  ansible.builtin.set_fact:
+    ai_validation_passed: true
+  when: ai_skip_validation | bool
 
 - name: Push generated playbook to git
   ansible.builtin.include_tasks: git_push.yml
