@@ -2,6 +2,10 @@
 # Render Jinja2 templates and apply CaC configuration to AAP
 # Uses infra.aap_configuration.dispatch role (same as ansible-aap-cac)
 
+- name: Set temp directory path
+  ansible.builtin.set_fact:
+    aap_cac_temp_dir: "/tmp/aiops-cac-{{ lookup('pipe', 'date +%Y%m%d-%H%M%S') }}"
+
 - name: Create temp directory for rendered CaC templates
   ansible.builtin.file:
     path: "{{ aap_cac_temp_dir }}"

@@ -45,5 +45,5 @@ git_remote_url: "{{ lookup('env', 'GIT_REMOTE_URL') | default('https://github.co
 git_default_branch: "{{ lookup('env', 'GIT_DEFAULT_BRANCH') | default('main', true) }}"
 git_playbook_dir: "{{ lookup('env', 'GIT_PLAYBOOK_DIR') | default('playbooks', true) }}"
 
-# Temp directory for rendered CaC templates
-aap_cac_temp_dir: "/tmp/aiops-cac-{{ lookup('pipe', 'date +%Y%m%d-%H%M%S') }}"
+# Temp directory for rendered CaC templates (set via set_fact in create_resources.yml)
+aap_cac_temp_dir: "/tmp/aiops-cac"
