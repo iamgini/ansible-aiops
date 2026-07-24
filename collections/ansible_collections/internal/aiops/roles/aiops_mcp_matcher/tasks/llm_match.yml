@@ -1,0 +1,102 @@
+---
+# LLM-based template matching: send trimmed templates + event context to AI API
+# Sets: best_match (dict with id, name, description, score)
+
+- name: Trim templates for LLM context
+  ansible.builtin.set_fact:
+    templates_for_llm: >-
+      {{ all_job_templates | map('combine', {})
+         | map('dict2items')
+         | map('selectattr', 'key', 'in', ['id', 'name', 'description'])
+         | map('items2dict')
+         | list }}
+
+- name: Build LLM matching prompt
+  ansible.builtin.set_fact:
+    llm_match_prompt: |
+      You are an IT operations expert. Given an event and a list of Ansible Automation Platform job templates, pick the BEST template to remediate this event.
+
+      EVENT:
+        Type: {{ event_type }}
+        Description: {{ event_description }}
+        Host: {{ event_host }}
+        Severity: {{ event_severity | default('unknown') }}
+        Service: {{ event_service | default('N/A') }}
+        Tags: {{ event_tags | default([]) | join(', ') }}
+
+      AVAILABLE TEMPLATES:
+      {{ templates_for_llm | to_nice_json }}
+
+      INSTRUCTIONS:
+      - Pick the single best template, or say "none" if nothing fits
+      - Return ONLY valid JSON, no markdown fences, no explanation outside the JSON
+      - Use this exact schema:
+
+      {"template_id": <int>, "template_name": "<string>", "confidence": <0-100>, "reason": "<one sentence>", "suggested_extra_vars": {"key": "value"}}
+
+      If no template fits, return:
+      {"template_id": null, "template_name": "none", "confidence": 0, "reason": "<why nothing fits>", "suggested_extra_vars": {}}
+
+- name: Build API request headers
+  ansible.builtin.set_fact:
+    llm_api_headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer {{ llm_api_token }}"
+  no_log: true
+
+- name: Remove Authorization header when no token provided
+  ansible.builtin.set_fact:
+    llm_api_headers:
+      Content-Type: "application/json"
+  when: llm_api_token | length == 0
+
+- name: Call LLM API for template matching
+  ansible.builtin.uri:
+    url: "{{ llm_api_url }}"
+    method: POST
+    headers: "{{ llm_api_headers }}"
+    body_format: json
+    body:
+      model: "{{ llm_model }}"
+      messages:
+        - role: "user"
+          content: "{{ llm_match_prompt }}"
+      temperature: 0.1
+    return_content: true
+    status_code: 200
+    timeout: 60
+    validate_certs: "{{ llm_validate_certs }}"
+  register: llm_response
+  no_log: true
+
+- name: Extract LLM response content
+  ansible.builtin.set_fact:
+    llm_raw_content: "{{ llm_response.json.choices[0].message.content }}"
+
+- name: Strip markdown fences if present
+  ansible.builtin.set_fact:
+    llm_clean_content: >-
+      {{ llm_raw_content | regex_replace('(?s)^```(json)?\n?', '') | regex_replace('\n?```\s*$', '') | trim }}
+
+- name: Parse LLM recommendation
+  ansible.builtin.set_fact:
+    llm_recommendation: "{{ llm_clean_content | from_json }}"
+
+- name: Show LLM recommendation
+  ansible.builtin.debug:
+    msg: >-
+      LLM recommends: {{ llm_recommendation.template_name }}
+      (confidence={{ llm_recommendation.confidence }},
+      reason={{ llm_recommendation.reason }})
+
+- name: Set best match from LLM recommendation
+  ansible.builtin.set_fact:
+    best_match:
+      id: "{{ llm_recommendation.template_id }}"
+      name: "{{ llm_recommendation.template_name }}"
+      description: "{{ llm_recommendation.reason }}"
+      score: "{{ llm_recommendation.confidence }}"
+      suggested_extra_vars: "{{ llm_recommendation.suggested_extra_vars | default({}) }}"
+  when:
+    - llm_recommendation.template_id is not none
+    - llm_recommendation.confidence | int >= mcp_minimum_score

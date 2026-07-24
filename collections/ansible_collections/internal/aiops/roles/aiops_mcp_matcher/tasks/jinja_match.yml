@@ -1,0 +1,76 @@
+---
+# Jinja-based template scoring: match event attributes against template name/description
+# Sets: best_match (dict with id, name, description, score)
+
+- name: Find matching job templates based on event attributes
+  ansible.builtin.set_fact:
+    matched_templates: >-
+      {{
+        all_job_templates | selectattr('name', 'defined') | list |
+        selectattr('name', 'search', event_type | regex_escape) | list +
+        all_job_templates | selectattr('description', 'defined') | list |
+        selectattr('description', 'search', event_service | default('') | regex_escape) | list +
+        all_job_templates | selectattr('name', 'defined') | list |
+        selectattr('name', 'search', event_host | regex_escape) | list
+      }}
+
+- name: Remove duplicate matches
+  ansible.builtin.set_fact:
+    unique_matched_templates: "{{ matched_templates | unique | list }}"
+
+- name: Score and rank job templates by relevance
+  ansible.builtin.set_fact:
+    scored_templates: >-
+      {% set templates = [] %}
+      {% for template in (unique_matched_templates | default([])) %}
+        {% set score = 0 %}
+        {% set name_lower = (template.name | default('')) | lower %}
+        {% set desc_lower = (template.description | default('')) | lower %}
+        {% set event_type_lower = event_type | lower %}
+        {% set event_service_lower = (event_service | default('')) | lower %}
+        {% set event_host_lower = (event_host | default('')) | lower %}
+        {% if event_type_lower in name_lower %}
+          {% set score = score + 50 %}
+        {% endif %}
+        {% if event_service_lower and event_service_lower in name_lower %}
+          {% set score = score + 40 %}
+        {% endif %}
+        {% if event_host_lower and event_host_lower in name_lower %}
+          {% set score = score + 30 %}
+        {% endif %}
+        {% if event_type_lower in desc_lower %}
+          {% set score = score + 20 %}
+        {% endif %}
+        {% if event_service_lower and event_service_lower in desc_lower %}
+          {% set score = score + 20 %}
+        {% endif %}
+        {% for tag in (event_tags | default([])) %}
+          {% if tag | lower in name_lower or tag | lower in desc_lower %}
+            {% set score = score + 10 %}
+          {% endif %}
+        {% endfor %}
+        {% if event_severity | default('') | lower == 'critical' and ('critical' in name_lower or 'emergency' in name_lower) %}
+          {% set score = score + 15 %}
+        {% elif event_severity | default('') | lower == 'high' and ('high' in name_lower or 'urgent' in name_lower) %}
+          {% set score = score + 15 %}
+        {% endif %}
+        {% set _ = templates.append({
+          'id': template.id,
+          'name': template.name,
+          'description': template.description | default(''),
+          'project': template.summary_fields.project.name | default(''),
+          'inventory': template.summary_fields.inventory.name | default(''),
+          'score': score,
+          'url': template.url | default('')
+        }) %}
+      {% endfor %}
+      {{ templates | sort(attribute='score', reverse=True) }}
+  when: unique_matched_templates | length > 0
+
+- name: Set best match from scored templates
+  ansible.builtin.set_fact:
+    best_match: "{{ scored_templates | first }}"
+  when:
+    - scored_templates is defined
+    - scored_templates | length > 0
+    - (scored_templates | first).score >= mcp_minimum_score

@@ -25,6 +25,13 @@ mcp_score: 0
 mcp_confidence_threshold: 100
 mcp_minimum_score: 50
 
+# LLM-based matching (optional — falls back to Jinja scoring when false)
+mcp_match_using_llm: "{{ lookup('env', 'MCP_MATCH_USING_LLM') | default(false, true) }}"
+llm_api_url: "{{ lookup('env', 'GENERIC_AI_API_URL') | default('http://localhost:11434/v1/chat/completions', true) }}"
+llm_api_token: "{{ lookup('env', 'GENERIC_AI_API_TOKEN') | default('', true) }}"
+llm_model: "{{ lookup('env', 'GENERIC_AI_MODEL') | default('gpt-4', true) }}"
+llm_validate_certs: "{{ lookup('env', 'GENERIC_AI_VALIDATE_CERTS') | default(false, true) }}"
+
 # AAP Controller Configuration (for job launch)
 controller_host: "{{ lookup('env', 'CONTROLLER_HOST') | default('', true) }}"
 controller_username: "{{ lookup('env', 'CONTROLLER_USERNAME') | default('', true) }}"
