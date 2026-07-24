@@ -58,7 +58,7 @@
     timeout: 180
     validate_certs: "{{ generic_api_validate_certs }}"
   register: generic_api_response
-  # no_log: true
+  no_log: true
 
 - name: Extract generated playbook content
   ansible.builtin.set_fact:
