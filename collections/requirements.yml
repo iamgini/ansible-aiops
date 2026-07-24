@@ -10,7 +10,7 @@ collections:
 
   # Ansible Utilities (Dependency of ansible.mcp, in 'published' repo)
   - name: ansible.utils
-    source: https://aapaio.lab.gineesh.com/api/galaxy/content/published/
+    # source: https://aapaio.lab.gineesh.com/api/galaxy/content/published/
 
   # Event-Driven Automation (Required for rulebooks)
   # - name: ansible.eda
