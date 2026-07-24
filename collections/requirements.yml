@@ -20,16 +20,14 @@ collections:
   #   version: ">=1.0.0"
 
   # AAP Controller (Required for MCP and configuration)
-  # - name: ansible.controller
-  #   version: ">=4.5.0"
+  - name: ansible.controller
 
   # Platform Integration (Optional)
   # - name: ansible.platform
   #   version: ">=1.0.0"
 
   # AAP Configuration as Code (Required for dynamic JT/WF creation)
-  # - name: infra.aap_configuration
-  #   version: ">=2.0.0"
+  - name: infra.aap_configuration
 
   # Cryptography (Required for SSL certificate remediation playbook)
   # - name: community.crypto
