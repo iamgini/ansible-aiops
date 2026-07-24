@@ -1,0 +1,31 @@
+---
+# MCP Setup: Validate config, generate manifest, add MCP host to inventory
+# Called from playbook Play 1 (localhost) via: tasks_from: setup.yml
+
+- name: Validate and persist MCP configuration
+  ansible.builtin.set_fact:
+    mcp_configured: "{{ (mcp_bearer_token | length > 0) and (mcp_server_url | length > 0) }}"
+    mcp_bearer_token: "{{ mcp_bearer_token }}"
+  no_log: true
+
+- name: MCP configuration status
+  ansible.builtin.debug:
+    msg: "{{ 'MCP configured: ' + mcp_server_url if mcp_configured else 'MCP not configured — skipping to AI generation' }}"
+
+- name: Generate MCP manifest file
+  ansible.builtin.template:
+    src: mcp-manifest.json.j2
+    dest: "{{ mcp_manifest_dir }}/aap-mcp-manifest.json"
+    mode: "0600"
+  when: mcp_configured
+
+- name: Add MCP host to runtime inventory
+  ansible.builtin.add_host:
+    name: aap_mcp
+    ansible_connection: ansible.mcp.mcp
+    ansible_mcp_server_name: "{{ mcp_server_name }}"
+    ansible_mcp_manifest_path: "{{ mcp_manifest_dir }}/aap-mcp-manifest.json"
+    ansible_mcp_validate_certs: "{{ mcp_verify_ssl }}"
+    ansible_connect_timeout: 30
+    ansible_command_timeout: 30
+  when: mcp_configured

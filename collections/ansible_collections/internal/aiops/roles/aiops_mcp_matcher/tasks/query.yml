@@ -1,0 +1,45 @@
+---
+# MCP Query: Retrieve job templates from AAP via MCP connection
+# Called from playbook Play 2 (aap_mcp host) via: tasks_from: query.yml
+
+- name: Get MCP server information
+  ansible.mcp.server_info:
+  register: mcp_server_info
+
+- name: MCP server info
+  ansible.builtin.debug:
+    msg: "MCP Server: {{ mcp_server_info }}"
+  when: mcp_server_info is defined
+
+- name: List available MCP tools
+  ansible.mcp.tools_info:
+  register: mcp_tools_list
+
+- name: Available MCP tools
+  ansible.builtin.debug:
+    msg: "{{ mcp_tools_list.tools | default([]) | map(attribute='name') | list }}"
+  when: mcp_tools_list is defined
+
+- name: Query all job templates from AAP via MCP
+  ansible.mcp.run_tool:
+    name: "{{ mcp_tool_name }}"
+    args:
+      page_size: "{{ mcp_tool_page_size }}"
+  register: job_templates_raw
+
+- name: Parse and store templates on localhost
+  ansible.builtin.set_fact:
+    all_job_templates: >-
+      {% if job_templates_raw.structured_content is defined and job_templates_raw.structured_content %}
+        {{ job_templates_raw.structured_content.results | default([]) }}
+      {% elif job_templates_raw.content is defined and job_templates_raw.content | length > 0 %}
+        {{ (job_templates_raw.content[0].text | from_json).results | default([]) }}
+      {% else %}
+        []
+      {% endif %}
+  delegate_to: localhost
+  delegate_facts: true
+
+- name: Templates retrieved
+  ansible.builtin.debug:
+    msg: "{{ hostvars['localhost']['all_job_templates'] | default([]) | length }} templates found via MCP"
