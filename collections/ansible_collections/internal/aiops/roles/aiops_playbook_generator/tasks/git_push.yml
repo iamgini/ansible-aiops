@@ -42,6 +42,7 @@
 - name: Publish changes to remote
   ansible.scm.git_publish:
     path: "{{ repository.path }}"
+    token: "{{ git_token | urlencode }}"
     commit:
       message: "AI-generated playbook: {{ playbook_filename }} [{{ event_type }}]"
     user:
