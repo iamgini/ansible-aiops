@@ -35,17 +35,14 @@
       ansible.builtin.debug:
         msg: "{{ 'MCP configured: ' + mcp_server_url if mcp_configured else 'MCP not configured — skipping to AI generation' }}"
 
+    - name: Show MCP manifest content
+      ansible.builtin.debug:
+        msg: "{{ lookup('template', 'templates/mcp-manifest.json.j2') }}"
+      when: mcp_configured
+
     - name: Generate MCP manifest file
-      ansible.builtin.copy:
-        content: |
-          {
-            "{{ mcp_server_name }}": {
-              "type": "http",
-              "url": "{{ mcp_server_url }}",
-              "args": [],
-              "description": "AAP MCP Server"
-            }
-          }
+      ansible.builtin.template:
+        src: templates/mcp-manifest.json.j2
         dest: "{{ mcp_manifest_dir }}/aap-mcp-manifest.json"
         mode: "0600"
       when: mcp_configured
