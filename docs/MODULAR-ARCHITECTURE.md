@@ -39,15 +39,18 @@ The workflow has been refactored from a monolithic playbook into a **local Ansib
 ├────────────────────────────────────────────────────────┤
 │  Role: aiops_playbook_generator                        │
 │  ├─ Validate ai_backend variable                       │
-│  └─ Include backend-specific tasks:                    │
-│      ├─ backend_lightspeed.yml                         │
-│      ├─ backend_generic_api.yml                        │
-│      └─ backend_coder.yml                              │
+│  ├─ Include backend-specific tasks:                    │
+│  │    ├─ backend_lightspeed_api.yml                    │
+│  │    ├─ backend_generic_api.yml                       │
+│  │    └─ backend_coder_api.yml                         │
+│  ├─ Push to review branch (ansible.scm)                │
+│  └─ Set: ai_git_review_branch                          │
 ├────────────────────────────────────────────────────────┤
 │  Role: aiops_cac_manager                               │
-│  ├─ Create AAP Job Template via CaC                    │
-│  ├─ Create AAP Workflow Template via CaC               │
-│  └─ Launch workflow for approval + execution           │
+│  ├─ Shared project (allow_override=true)               │
+│  ├─ Per-event JT (scm_branch=review branch)            │
+│  ├─ Per-event WF (Approval → Run JT)                  │
+│  └─ Uses ansible.controller modules directly           │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -72,25 +75,21 @@ ansible-aiops/
 │       │   ├── meta/main.yml
 │       │   └── tasks/
 │       │       ├── main.yml              # Backend selector
-│       │       ├── backend_lightspeed.yml
+│       │       ├── backend_lightspeed_api.yml
 │       │       ├── backend_generic_api.yml
-│       │       ├── backend_coder.yml
+│       │       ├── backend_coder_api.yml
 │       │       ├── validate_playbook.yml
-│       │       ├── git_push.yml
+│       │       ├── git_push.yml          # Uses ansible.scm (git_retrieve + git_publish)
 │       │       └── generate_with_retry.yml
 │       │
 │       └── aiops_cac_manager/            # Role 3: CaC management
 │           ├── defaults/main.yml
 │           ├── meta/main.yml
-│           ├── tasks/
-│           │   ├── main.yml
-│           │   ├── authenticate.yml
-│           │   ├── create_resources.yml
-│           │   └── launch_workflow.yml
-│           └── templates/
-│               ├── project.yml.j2
-│               ├── job_template.yml.j2
-│               └── workflow_template.yml.j2
+│           └── tasks/
+│               ├── main.yml
+│               ├── authenticate.yml
+│               ├── create_resources.yml  # Uses ansible.controller modules directly
+│               └── launch_workflow.yml
 │
 └── docs/
     ├── CODER-INTEGRATION.md
@@ -126,41 +125,62 @@ ansible-aiops/
 
 **Inputs** (from playbook):
 - `event_type`, `event_description`, `event_host`, `event_severity`
-- `ai_backend` - "lightspeed" (default) or "coder"
+- `ai_backend` - `"generic_api"` (default), `"lightspeed_api"`, or `"coder_api"`
 - Backend-specific configs (URLs, tokens, etc.)
 
 **Outputs** (set_fact):
 - `ai_generation_completed` (bool)
-- `ai_backend_used` - "lightspeed" or "coder"
+- `ai_backend_used` - backend identifier
 - `ai_playbook_filename` - Generated playbook filename
 - `ai_git_pushed` (bool) - Whether playbook was pushed to git
-- `ai_workspace_name` (if Coder backend)
+- `ai_git_review_branch` - Review branch name (e.g., `aiops/disk-full-150303`)
+
+**Git Workflow** (`git_push.yml`):
+- Uses `ansible.scm.git_retrieve` to clone repo and create review branch
+- Uses `ansible.scm.git_publish` to commit and push
+- Branch naming: `<prefix>/<event_type>-<HHMMSS>` (e.g., `aiops/disk-full-150303`)
+- Token passed via `origin.token` with `urlencode` filter
 
 **Backends**:
 
-#### Backend: `lightspeed` (Default)
-**File**: `tasks/backend_lightspeed.yml`
+#### Backend: `generic_api` (Default)
+**File**: `tasks/backend_generic_api.yml`
+
+**What it does**:
+1. Build prompt from event context
+2. Call OpenAI-compatible API (OpenAI, Azure OpenAI, vLLM, Ollama, LiteLLM)
+3. Strip markdown fences from response
+4. Push to review branch via `ansible.scm`
+
+**Configuration**:
+```yaml
+ai_backend: "generic_api"
+generic_api_url: "http://localhost:11434/v1/chat/completions"
+generic_api_token: "{{ lookup('env', 'GENERIC_AI_API_TOKEN') }}"
+generic_ai_model: "gpt-4"
+git_remote_url: "https://github.com/org/repo.git"
+git_token: "{{ lookup('env', 'GIT_TOKEN') }}"
+```
+
+#### Backend: `lightspeed_api`
+**File**: `tasks/backend_lightspeed_api.yml`
 
 **What it does**:
 1. Build prompt from event context
 2. Call Red Hat Automation Code Assistant API
-3. Receive generated playbook content
-4. Clone git repository to temp directory
-5. Save playbook to `playbooks/` directory
-6. Git commit and push
-7. Cleanup temp directory
+3. Push to review branch via `ansible.scm`
 
 **Configuration**:
 ```yaml
-ai_backend: "lightspeed"
+ai_backend: "lightspeed_api"
 lightspeed_url: "http://localhost:8000/api/v0/ai/generations/"
 lightspeed_token: "{{ lookup('env', 'LIGHTSPEED_TOKEN') }}"
 git_remote_url: "https://github.com/org/repo.git"
 git_token: "{{ lookup('env', 'GIT_TOKEN') }}"
 ```
 
-#### Backend: `coder`
-**File**: `tasks/backend_coder.yml`
+#### Backend: `coder_api`
+**File**: `tasks/backend_coder_api.yml`
 
 **What it does**:
 1. Check Coder CLI availability
@@ -228,14 +248,14 @@ export GIT_TOKEN="ghp_your_github_token"
 ### Skipping MCP (Force AI Generation)
 
 ```bash
-# Skip MCP query by setting empty URL
+# Skip MCP query
 ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_type=test" \
   -e "event_description='Test AI generation'" \
   -e "event_host=localhost" \
   -e "event_severity=low" \
-  -e "mcp_server_url=''" \
-  -e "ai_backend=lightspeed"
+  -e "skip_mcp=true" \
+  -e "ai_backend=generic_api"
 ```
 
 ### From EDA Rulebook
@@ -255,7 +275,7 @@ rules:
           event_severity: "{{ event.payload.severity }}"
           event_service: "{{ event.payload.service | default('') }}"
           event_tags: "{{ event.payload.tags | default([]) }}"
-          ai_backend: "{{ lookup('env', 'AI_BACKEND') | default('lightspeed') }}"
+          ai_backend: "{{ lookup('env', 'AI_BACKEND') | default('generic_api') }}"
 ```
 
 ## Configuration
@@ -271,7 +291,7 @@ all:
       ansible_connection: local
   vars:
     # AI Backend Selection (can also be set via env: AI_BACKEND)
-    ai_backend: "lightspeed"  # or "coder"
+    ai_backend: "generic_api"  # or "lightspeed_api" or "coder_api"
     
     # MCP Configuration
     mcp_server_url: "{{ lookup('env', 'AAP_MCP_SERVER_URL') }}"
@@ -347,18 +367,25 @@ Step 1: aiops_mcp_matcher
   → Score < 50 (minimum)
   → Set: mcp_completed = false
 
-Step 2: aiops_playbook_generator (backend: lightspeed)
+Step 2: aiops_playbook_generator (backend: generic_api)
   → Build prompt
-  → Call Lightspeed API
+  → Call OpenAI-compatible API
   → Receive playbook content
-  → Clone git repo
+  → Clone repo via ansible.scm.git_retrieve
+  → Create review branch: aiops/unknown-error-143022
   → Save to playbooks/unknown_error_app_server_01.yml
-  → Git commit and push
+  → Push via ansible.scm.git_publish
   → Set: ai_generation_completed = true
+
+Step 3: aiops_cac_manager
+  → Create/update shared project (allow_override=true)
+  → Create JT with scm_branch=aiops/unknown-error-143022
+  → Create WF: Approval → Run JT
 
 Output:
   ✅ Generated: playbooks/unknown_error_app_server_01.yml
-  Git: Pushed to repository
+  Git: Pushed to branch aiops/unknown-error-143022
+  AAP: JT + WF created (approval required)
 ```
 
 ### Example 3: No MCP Match → Coder Generates Playbook
@@ -374,7 +401,7 @@ Step 1: aiops_mcp_matcher
   → Score < 50 (minimum)
   → Set: mcp_completed = false
 
-Step 2: aiops_playbook_generator (backend: coder)
+Step 2: aiops_playbook_generator (backend: coder_api)
   → Check Coder CLI
   → Create workspace: aiops-service-crash-20260710-143022
   → Wait for "Running" status
@@ -385,10 +412,16 @@ Step 2: aiops_playbook_generator (backend: coder)
   → Cleanup workspace
   → Set: ai_generation_completed = true
 
+Step 3: aiops_cac_manager
+  → Create/update shared project (allow_override=true)
+  → Create JT with scm_branch=review branch
+  → Create WF: Approval → Run JT
+
 Output:
   ✅ Generated: playbooks/service_crash_db_server_01.yml
   Workspace: Deleted (auto_cleanup = true)
-  Git: Pushed to repository
+  Git: Pushed to review branch
+  AAP: JT + WF created (approval required)
 ```
 
 ## Adding New AI Backends
@@ -434,11 +467,10 @@ To add a new AI backend (e.g., "ollama", "openai"):
    - name: Validate AI backend selection
      ansible.builtin.assert:
        that:
-         - ai_backend in ['lightspeed', 'coder', 'ollama']  # Add new backend
+         - ai_backend in ['generic_api', 'lightspeed_api', 'coder_api', 'ollama_api']
    
-   - name: Include Ollama backend tasks
-     ansible.builtin.include_tasks: backend_ollama.yml
-     when: ai_backend == 'ollama'
+   - name: Include backend tasks
+     ansible.builtin.include_tasks: "backend_{{ ai_backend }}.yml"
    ```
 
 4. **Add defaults**:
@@ -519,14 +551,14 @@ collections_paths = ./collections:~/.ansible/collections:/usr/share/ansible/coll
 ### Backend validation failed
 
 ```
-ERROR! Invalid ai_backend: unknown. Must be 'lightspeed' or 'coder'
+ERROR! Invalid ai_backend: unknown. Must be 'generic_api', 'lightspeed_api', or 'coder_api'
 ```
 
 **Solution**: Set `ai_backend` to a valid value:
 ```bash
-export AI_BACKEND="lightspeed"
+export AI_BACKEND="generic_api"
 # or
-ansible-navigator run ... -m stdout -e "ai_backend=coder"
+ansible-navigator run ... -m stdout -e "ai_backend=lightspeed_api"
 ```
 
 ### Role variables undefined

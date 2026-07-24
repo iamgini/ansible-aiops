@@ -64,7 +64,7 @@ This project can work with multiple AI backends for playbook generation:
 | `ansible.mcp` | >=1.0.0 | MCP client for AAP integration | Yes |
 | `ansible.utils` | >=2.0.0 | Utility functions (dependency of ansible.mcp) | Yes |
 | `ansible.controller` | >=4.5.0 | AAP controller modules (JT launch, config) | Yes |
-| `infra.aap_configuration` | >=2.0.0 | CaC roles for dynamic JT/WF creation | Yes |
+| `ansible.scm` | >=1.0.0 | Git operations (clone, branch, commit, push) | Yes |
 | `ansible.platform` | >=1.0.0 | AAP platform integration | Optional |
 
 ### Platform Requirements
@@ -190,7 +190,10 @@ Event Source → EDA Rulebook → Specific Rules Match?
                                     ├── Yes → Run Job Template
                                     └── No  → Find Match via MCP
                                               ├── High Score → Auto-launch
-                                              └── Low Score → Show recommendations
+                                              └── Low Score → AI Generate Playbook
+                                                    → Push to review branch (ansible.scm)
+                                                    → Create JT + WF in AAP (scm_branch override)
+                                                    → Approval → Run Remediation
 ```
 
 ## Output

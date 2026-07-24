@@ -41,10 +41,19 @@ EDA rulebook at `rulebooks/intelligent-remediation.yml`:
 
 ### 3. AI Playbook Generation
 
-Code Assistant integration in `generate-and-push.yml`:
-- Calls Red Hat Code Assistant API with event details
-- Generates playbooks using AI
-- Commits and pushes to Git repository
+Pluggable AI backends in `aiops_playbook_generator` role:
+- Backends: `generic_api` (default, OpenAI-compatible), `lightspeed_api`, `coder_api`
+- Dynamic include: `backend_{{ ai_backend }}.yml`
+- Git operations via `ansible.scm` (git_retrieve + git_publish)
+- Pushes to review branch: `aiops/<event_type>-<HHMMSS>`
+
+### 4. CaC Resource Creation
+
+`aiops_cac_manager` role creates AAP resources using `ansible.controller` modules:
+- **Shared project** with `allow_override: true` — one project, many JTs
+- **Per-event JT** with `scm_branch` set to the review branch — AAP auto-syncs on launch
+- **Per-event WF** with Approval → Run JT nodes
+- Authenticates via bearer token (preferred) or username/password
 
 ## Environment Setup
 
@@ -172,8 +181,9 @@ This project depends on:
 
 - **ansible.mcp** (≥1.0.0) - MCP client for AAP integration
 - **ansible.utils** (≥2.0.0) - Utility functions (dependency of ansible.mcp)
+- **ansible.scm** (≥1.0.0) - Git operations (git_retrieve, git_publish)
 - **ansible.eda** (≥1.0.0) - Event-driven automation
-- **ansible.controller** (≥4.5.0) - AAP controller interaction
+- **ansible.controller** (≥4.5.0) - AAP controller modules (project, job_template, workflow)
 - **ansible.platform** (≥1.0.0) - AAP platform integration
 
 Install all: `ansible-galaxy collection install -r requirements.yml`

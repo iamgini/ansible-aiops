@@ -31,5 +31,6 @@ Intelligent AIOps roles for event-driven remediation with Ansible Automation Pla
 
 ## Dependencies
 
-- `ansible.controller` >= 4.5.0
-- `infra.aap_configuration` >= 2.0.0
+- `ansible.controller` >= 4.5.0 (CaC: project, job_template, workflow modules)
+- `ansible.scm` >= 1.0.0 (Git operations: git_retrieve, git_publish)
+- `ansible.mcp` >= 1.0.0 (MCP client for AAP integration)
