@@ -1,12 +1,13 @@
 ---
 # Create AAP resources using ansible.controller modules directly
+# Shared project (branch override) + per-event JT + per-event WF (approval → run)
 
 - name: Build resource names
   ansible.builtin.set_fact:
     jt_name: "{{ aap_jt_prefix }}-{{ event_type }}-{{ event_host | regex_replace('\\.', '-') }}"
     wf_name: "{{ aap_wf_prefix }}-{{ event_type }}-{{ event_host | regex_replace('\\.', '-') }}"
 
-- name: Create or update project
+- name: Create or update shared project
   ansible.controller.project:
     controller_host: "{{ aap_hostname }}"
     controller_oauthtoken: "{{ controller_oauthtoken }}"
@@ -18,13 +19,14 @@
     scm_branch: "{{ git_default_branch }}"
     scm_clean: true
     scm_update_on_launch: true
+    allow_override: true
     credential: "{{ aap_scm_credential }}"
     organization: "{{ aap_organization }}"
     wait: true
     update_project: true
     state: present
 
-- name: Create or update job template
+- name: Create job template with branch override
   ansible.controller.job_template:
     controller_host: "{{ aap_hostname }}"
     controller_oauthtoken: "{{ controller_oauthtoken }}"
@@ -35,6 +37,7 @@
     inventory: "{{ aap_inventory }}"
     project: "{{ aap_project }}"
     playbook: "{{ git_playbook_dir }}/{{ ai_playbook_filename }}"
+    scm_branch: "{{ ai_git_review_branch }}"
     credentials:
       - "{{ aap_machine_credential }}"
     ask_limit_on_launch: true
@@ -42,69 +45,38 @@
     organization: "{{ aap_organization }}"
     state: present
 
-- name: Create or update workflow template
+- name: Create workflow template
   ansible.controller.workflow_job_template:
     controller_host: "{{ aap_hostname }}"
     controller_oauthtoken: "{{ controller_oauthtoken }}"
     validate_certs: "{{ aap_validate_certs }}"
     name: "{{ wf_name }}"
-    description: "AI-generated remediation workflow for {{ event_type }} on {{ event_host }}"
+    description: "Approval + remediation for {{ event_type }} on {{ event_host }}"
     organization: "{{ aap_organization }}"
     ask_variables_on_launch: true
     state: present
 
-- name: Add workflow node - sync project
+- name: Add approval node
   ansible.controller.workflow_job_template_node:
     controller_host: "{{ aap_hostname }}"
     controller_oauthtoken: "{{ controller_oauthtoken }}"
     validate_certs: "{{ aap_validate_certs }}"
     workflow_job_template: "{{ wf_name }}"
-    identifier: sync-project
-    unified_job_template: "{{ aap_project }}"
-    organization: "{{ aap_organization }}"
-    success_nodes:
-      - approve-remediation
-    failure_nodes:
-      - notify-failure
-    state: present
-
-- name: Add workflow node - approval
-  ansible.controller.workflow_job_template_node:
-    controller_host: "{{ aap_hostname }}"
-    controller_oauthtoken: "{{ controller_oauthtoken }}"
-    validate_certs: "{{ aap_validate_certs }}"
-    workflow_job_template: "{{ wf_name }}"
-    identifier: approve-remediation
+    identifier: approve
     approval_node:
       name: "Approve: {{ event_type }} on {{ event_host }}"
       timeout: "{{ aap_approval_timeout }}"
     success_nodes:
-      - run-remediation
-    failure_nodes:
-      - notify-failure
+      - run
     state: present
 
-- name: Add workflow node - run remediation
+- name: Add run node
   ansible.controller.workflow_job_template_node:
     controller_host: "{{ aap_hostname }}"
     controller_oauthtoken: "{{ controller_oauthtoken }}"
     validate_certs: "{{ aap_validate_certs }}"
     workflow_job_template: "{{ wf_name }}"
-    identifier: run-remediation
+    identifier: run
     unified_job_template: "{{ jt_name }}"
     organization: "{{ aap_organization }}"
-    failure_nodes:
-      - notify-failure
-    state: present
-
-- name: Add workflow node - notify failure
-  ansible.controller.workflow_job_template_node:
-    controller_host: "{{ aap_hostname }}"
-    controller_oauthtoken: "{{ controller_oauthtoken }}"
-    validate_certs: "{{ aap_validate_certs }}"
-    workflow_job_template: "{{ wf_name }}"
-    identifier: notify-failure
-    approval_node:
-      name: "FAILED: {{ event_type }} on {{ event_host }}"
-      timeout: 0
     state: present
