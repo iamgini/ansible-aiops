@@ -39,7 +39,9 @@
       "WebFetch(domain:docs.ansible.com)",
       "WebFetch(domain:forum.ansible.com)",
       "mcp__aap-mcp-job-mgmt__jobs_stdout_retrieve",
-      "mcp__aap-mcp-job-mgmt__jobs_job_events_list"
+      "mcp__aap-mcp-job-mgmt__jobs_job_events_list",
+      "mcp__aap-mcp-security-compliance__credentials_retrieve",
+      "mcp__aap-mcp-security-compliance__credential_types_retrieve"
     ]
   }
 }

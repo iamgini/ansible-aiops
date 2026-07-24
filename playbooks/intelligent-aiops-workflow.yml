@@ -17,6 +17,7 @@
   gather_facts: false
 
   vars:
+    skip_mcp: "{{ lookup('env', 'SKIP_MCP') | default(false, true) }}"
     mcp_server_url: "{{ lookup('env', 'AAP_MCP_SERVER_URL') | default('', true) }}"
     mcp_bearer_token: "{{ lookup('env', 'AAP_BEARER_TOKEN') | default(lookup('env', 'MCP_BEARER_TOKEN'), true) | default('', true) }}"
     mcp_server_name: "aap"
@@ -26,7 +27,7 @@
   tasks:
     - name: Validate MCP configuration
       ansible.builtin.set_fact:
-        mcp_configured: "{{ (mcp_bearer_token | length > 0) and (mcp_server_url | length > 0) }}"
+        mcp_configured: "{{ (not (skip_mcp | bool)) and (mcp_bearer_token | length > 0) and (mcp_server_url | length > 0) }}"
         mcp_completed: false
         mcp_action: "not_started"
         mcp_score: 0
