@@ -22,7 +22,7 @@
     host_key_checking: "{{ 'yes' if git_ssl_verify | bool else 'no' }}"
     timeout: 60
   register: repository
-  no_log: true
+  # no_log: true
   when: git_token | length > 0
 
 - name: Create playbook directory in cloned repo
