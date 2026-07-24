@@ -64,7 +64,7 @@
   gather_facts: false
 
   vars:
-    ai_backend: "{{ lookup('env', 'AI_BACKEND') | default('lightspeed', true) }}"
+    ai_backend: "{{ lookup('env', 'AI_BACKEND') | default('generic_api', true) }}"
 
   tasks:
     - name: Execute MCP matcher role (scoring and launch)
@@ -88,7 +88,6 @@
         event_severity: "{{ event_severity }}"
         event_service: "{{ event_service | default('') }}"
         event_tags: "{{ event_tags | default([]) }}"
-        ai_backend: "{{ ai_backend }}"
       when: not mcp_completed
 
     - name: Execute CaC Manager to create JT and Workflow in AAP

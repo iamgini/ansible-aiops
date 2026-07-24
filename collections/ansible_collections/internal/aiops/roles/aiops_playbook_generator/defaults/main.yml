@@ -2,7 +2,7 @@
 # Default variables for aiops_playbook_generator role
 
 # AI Backend Selection
-ai_backend: "lightspeed"  # Options: "lightspeed" (default), "generic_api", or "coder"
+ai_backend: "generic_api"  # Options: "generic_api" (default), "lightspeed", or "coder"
 
 # Retry on validation failure (feed errors back to AI and regenerate)
 ai_max_retries: 3
