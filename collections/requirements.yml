@@ -2,6 +2,7 @@
 # Ansible Collection Requirements for AIOps Execution Environment
 
 collections:
+  - name: ansible.utils
   # Model Context Protocol Client (Required for MCP integration)
   - name: ansible.mcp
     # source: https://aapaio.lab.gineesh.com/api/galaxy/content/rh-certified/
@@ -12,8 +13,7 @@ collections:
 
 
   # Ansible Utilities (Dependency of ansible.mcp)
-  # - name: ansible.utils
-  #   version: ">=2.0.0"
+  - name: ansible.utils
 
   # AAP Controller (Required for MCP and configuration)
   # - name: ansible.controller
