@@ -1,20 +1,20 @@
 ---
-# Ansible Collection Requirements for AIOps Execution Environment
+# Ansible Collection Requirements for AIOps Project
+# These collections are installed during AAP project sync.
+# Note: ansible.utils is auto-installed as a dependency of ansible.mcp.
 
 collections:
-  - name: ansible.utils
-    source: https://aapaio.lab.gineesh.com/api/galaxy/content/rh-certified/
   # Model Context Protocol Client (Required for MCP integration)
   - name: ansible.mcp
-    source: https://aapaio.lab.gineesh.com/api/galaxy/content/rh-certified/
+    # source: https://aapaio.lab.gineesh.com/api/galaxy/content/rh-certified/
+
+  # Ansible Utilities (Dependency of ansible.mcp)
+  # - name: ansible.utils
+  #   source: https://aapaio.lab.gineesh.com/api/galaxy/content/rh-certified/
 
   # Event-Driven Automation (Required for rulebooks)
   # - name: ansible.eda
   #   version: ">=1.0.0"
-
-
-  # Ansible Utilities (Dependency of ansible.mcp)
-  - name: ansible.utils
 
   # AAP Controller (Required for MCP and configuration)
   # - name: ansible.controller
