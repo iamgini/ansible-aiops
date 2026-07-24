@@ -10,6 +10,9 @@ collections:
 
   # Ansible Utilities (Dependency of ansible.mcp, in 'published' repo)
   - name: ansible.utils
+
+  # SCM Git Operations (clone, branch, commit, push)
+  - name: ansible.scm
     # source: https://aapaio.lab.gineesh.com/api/galaxy/content/published/
 
   # Event-Driven Automation (Required for rulebooks)
