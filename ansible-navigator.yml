@@ -1,0 +1,27 @@
+---
+ansible-navigator:
+  execution-environment:
+    container-engine: podman
+    image: registry.redhat.io/ansible-automation-platform-27/ee-supported-rhel9:latest
+    enabled: true
+    pull:
+      policy: missing
+    environment-variables:
+      pass:
+        - AAP_MCP_SERVER_URL
+        - AAP_BEARER_TOKEN
+        - MCP_BEARER_TOKEN
+    volume-mounts:
+      - src: ./collections
+        dest: /home/gmadappa/ansible/ansible-aiops/collections
+        options: Z
+
+  logging:
+    level: info
+    append: false
+    file: ansible-navigator.log
+
+  mode: stdout
+
+  playbook-artifact:
+    enable: false

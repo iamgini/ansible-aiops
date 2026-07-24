@@ -25,7 +25,8 @@
     ansible_connection: ansible.mcp.mcp
     ansible_mcp_server_name: "{{ mcp_server_name }}"
     ansible_mcp_manifest_path: "{{ mcp_manifest_dir }}/aap-mcp-manifest.json"
+    ansible_mcp_bearer_token: "{{ mcp_bearer_token }}"
     ansible_mcp_validate_certs: "{{ mcp_verify_ssl }}"
     ansible_connect_timeout: 30
-    ansible_command_timeout: 30
+    ansible_command_timeout: 60
   when: mcp_configured

@@ -42,7 +42,10 @@
       "mcp__aap-mcp-job-mgmt__jobs_job_events_list",
       "mcp__aap-mcp-security-compliance__credentials_retrieve",
       "mcp__aap-mcp-security-compliance__credential_types_retrieve",
-      "mcp__aap-mcp-security-compliance__credentials_list"
+      "mcp__aap-mcp-security-compliance__credentials_list",
+      "Bash(export AAP_MCP_SERVER_URL=\"https://aapaio.lab.gineesh.com:8448/job_management/mcp\")",
+      "Bash(export AAP_BEARER_TOKEN=\"dIGv7twpQm8kiqT5NNXgI6cWkVxFHP\")",
+      "Bash(ansible-navigator run *)"
     ]
   }
 }

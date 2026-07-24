@@ -46,9 +46,6 @@
   hosts: aap_mcp
   gather_facts: false
 
-  environment:
-    MCP_BEARER_TOKEN: "{{ hostvars['localhost']['mcp_bearer_token'] | default('') }}"
-
   tasks:
     - name: Query templates via MCP
       ansible.builtin.include_role:

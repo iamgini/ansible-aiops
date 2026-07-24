@@ -1,0 +1,213 @@
+{
+    "plays": [
+        {
+            "__play_name": "Setup MCP connection",
+            "name": "Setup MCP connection",
+            "pattern": "localhost",
+            "play": "Setup MCP connection",
+            "play_pattern": "localhost",
+            "play_uuid": "8ff9ee34-d3a2-02ee-b00d-000000000001",
+            "playbook": "/home/gmadappa/ansible/ansible-aiops/tests/test-mcp-query.yml",
+            "playbook_uuid": "eb432cc2-5acb-4724-b468-e00f83bc95b5",
+            "tasks": [
+                {
+                    "__changed": false,
+                    "__duration": "0s",
+                    "__host": "localhost",
+                    "__number": 0,
+                    "__result": "Failed",
+                    "__task": "Validate MCP config",
+                    "__task_action": "ansible.builtin.assert",
+                    "duration": 0.048263,
+                    "end": "2026-07-24T09:52:59.088840+00:00",
+                    "event_loop": null,
+                    "host": "localhost",
+                    "ignore_errors": false,
+                    "play": "Setup MCP connection",
+                    "play_pattern": "localhost",
+                    "play_uuid": "8ff9ee34-d3a2-02ee-b00d-000000000001",
+                    "playbook": "/home/gmadappa/ansible/ansible-aiops/tests/test-mcp-query.yml",
+                    "playbook_uuid": "eb432cc2-5acb-4724-b468-e00f83bc95b5",
+                    "remote_addr": "127.0.0.1",
+                    "res": {
+                        "_ansible_verbose_always": true,
+                        "assertion": "mcp_server_url | length > 0",
+                        "changed": false,
+                        "evaluated_to": false,
+                        "exception": "(traceback unavailable)",
+                        "msg": "Set AAP_MCP_SERVER_URL and AAP_BEARER_TOKEN environment variables"
+                    },
+                    "resolved_action": "ansible.builtin.assert",
+                    "start": "2026-07-24T09:52:59.040577+00:00",
+                    "task": "Validate MCP config",
+                    "task_action": "ansible.builtin.assert",
+                    "task_args": "",
+                    "task_path": "/home/gmadappa/ansible/ansible-aiops/tests/test-mcp-query.yml:17",
+                    "task_uuid": "8ff9ee34-d3a2-02ee-b00d-000000000003",
+                    "uuid": "5cb1ef8e-f7e3-412b-bdd3-03e9ef289684"
+                }
+            ],
+            "uuid": "8ff9ee34-d3a2-02ee-b00d-000000000001"
+        }
+    ],
+    "settings_entries": {
+        "ansible-navigator": {
+            "ansible": {
+                "cmdline": "-v",
+                "config": {
+                    "help": false
+                },
+                "doc": {
+                    "help": false,
+                    "plugin": {
+                        "type": "module"
+                    }
+                },
+                "inventory": {
+                    "help": false
+                },
+                "playbook": {
+                    "help": false,
+                    "path": "/home/gmadappa/ansible/ansible-aiops/tests/test-mcp-query.yml"
+                }
+            },
+            "ansible-builder": {
+                "help": false,
+                "workdir": "/home/gmadappa/ansible/ansible-aiops"
+            },
+            "ansible-runner": {
+                "job-events": false
+            },
+            "app": "run",
+            "collection-doc-cache-path": "/home/gmadappa/.cache/ansible-navigator/collection_doc_cache.db",
+            "color": {
+                "enable": true,
+                "osc4": true
+            },
+            "editor": {
+                "command": "vim {filename}",
+                "console": true
+            },
+            "enable-prompts": false,
+            "exec": {
+                "command": "/bin/bash",
+                "shell": true
+            },
+            "execution-environment": {
+                "container-engine": "podman",
+                "enabled": true,
+                "image": "ghcr.io/ansible/community-ansible-dev-tools:latest",
+                "pull": {
+                    "policy": "tag"
+                }
+            },
+            "format": "yaml",
+            "images": {
+                "details": [
+                    "everything"
+                ]
+            },
+            "logging": {
+                "append": true,
+                "file": "/home/gmadappa/ansible/ansible-aiops/ansible-navigator.log",
+                "level": "warning"
+            },
+            "mode": "stdout",
+            "playbook-artifact": {
+                "enable": true,
+                "save-as": "{playbook_dir}/{playbook_name}-artifact-{time_stamp}.json"
+            },
+            "settings": {
+                "effective": false,
+                "sample": false,
+                "schema": "json",
+                "sources": false
+            },
+            "time-zone": "UTC"
+        }
+    },
+    "settings_sources": {
+        "ansible-navigator.ansible-builder.help": "Defaults",
+        "ansible-navigator.ansible-builder.workdir": "Defaults",
+        "ansible-navigator.ansible-lint.config": "Not set",
+        "ansible-navigator.ansible-lint.lintables": "Not set",
+        "ansible-navigator.ansible-runner.artifact-dir": "Not set",
+        "ansible-navigator.ansible-runner.job-events": "Defaults",
+        "ansible-navigator.ansible-runner.rotate-artifacts-count": "Not set",
+        "ansible-navigator.ansible-runner.timeout": "Not set",
+        "ansible-navigator.ansible.cmdline": "Command line",
+        "ansible-navigator.ansible.config.help": "Defaults",
+        "ansible-navigator.ansible.config.path": "Not set",
+        "ansible-navigator.ansible.doc.help": "Defaults",
+        "ansible-navigator.ansible.doc.plugin.name": "Not set",
+        "ansible-navigator.ansible.doc.plugin.type": "Defaults",
+        "ansible-navigator.ansible.inventory.entries": "Not set",
+        "ansible-navigator.ansible.inventory.help": "Defaults",
+        "ansible-navigator.ansible.playbook.help": "Defaults",
+        "ansible-navigator.ansible.playbook.path": "Command line",
+        "ansible-navigator.app": "Command line",
+        "ansible-navigator.collection-doc-cache-path": "Defaults",
+        "ansible-navigator.color.enable": "Defaults",
+        "ansible-navigator.color.osc4": "Defaults",
+        "ansible-navigator.editor.command": "Defaults",
+        "ansible-navigator.editor.console": "Defaults",
+        "ansible-navigator.enable-prompts": "Defaults",
+        "ansible-navigator.exec.command": "Defaults",
+        "ansible-navigator.exec.shell": "Defaults",
+        "ansible-navigator.execution-environment.container-engine": "Automatically determined",
+        "ansible-navigator.execution-environment.container-options": "Not set",
+        "ansible-navigator.execution-environment.enabled": "Defaults",
+        "ansible-navigator.execution-environment.environment-variables.pass": "Not set",
+        "ansible-navigator.execution-environment.environment-variables.set": "Not set",
+        "ansible-navigator.execution-environment.image": "Defaults",
+        "ansible-navigator.execution-environment.pull.arguments": "Not set",
+        "ansible-navigator.execution-environment.pull.policy": "Defaults",
+        "ansible-navigator.execution-environment.volume-mounts": "Not set",
+        "ansible-navigator.format": "Defaults",
+        "ansible-navigator.images.details": "Defaults",
+        "ansible-navigator.inventory-columns": "Not set",
+        "ansible-navigator.logging.append": "Defaults",
+        "ansible-navigator.logging.file": "Defaults",
+        "ansible-navigator.logging.level": "Defaults",
+        "ansible-navigator.mode": "Command line",
+        "ansible-navigator.playbook-artifact.enable": "Defaults",
+        "ansible-navigator.playbook-artifact.replay": "Not set",
+        "ansible-navigator.playbook-artifact.save-as": "Defaults",
+        "ansible-navigator.settings.effective": "Defaults",
+        "ansible-navigator.settings.sample": "Defaults",
+        "ansible-navigator.settings.schema": "Defaults",
+        "ansible-navigator.settings.sources": "Defaults",
+        "ansible-navigator.time-zone": "Defaults",
+        "settings_file_path": "None",
+        "settings_file_source": "None"
+    },
+    "status": "failed",
+    "status_color": 9,
+    "stdout": [
+        "\u001b[0;34mUsing /home/gmadappa/ansible/ansible-aiops/ansible.cfg as config file\u001b[0m",
+        "\u001b[1;35m[WARNING]: No inventory was parsed, only implicit localhost is available\u001b[0m",
+        "\u001b[1;35m[WARNING]: provided hosts list is empty, only localhost is available. Note that the implicit localhost does not match 'all'\u001b[0m",
+        "",
+        "PLAY [Setup MCP connection] ****************************************************",
+        "",
+        "TASK [Validate MCP config] *****************************************************",
+        "\u001b[0;31m[ERROR]: Task failed: Action failed: Set AAP_MCP_SERVER_URL and AAP_BEARER_TOKEN environment variables\u001b[0m",
+        "\u001b[0;31mOrigin: /home/gmadappa/ansible/ansible-aiops/tests/test-mcp-query.yml:17:7\u001b[0m",
+        "\u001b[0;31m\u001b[0m",
+        "\u001b[0;31m15\u001b[0m",
+        "\u001b[0;31m16   tasks:\u001b[0m",
+        "\u001b[0;31m17     - name: Validate MCP config\u001b[0m",
+        "\u001b[0;31m         ^ column 7\u001b[0m",
+        "\u001b[0;31m\u001b[0m",
+        "\u001b[0;31mfatal: [localhost]: FAILED! => {\u001b[0m",
+        "\u001b[0;31m    \"assertion\": \"mcp_server_url | length > 0\",\u001b[0m",
+        "\u001b[0;31m    \"changed\": false,\u001b[0m",
+        "\u001b[0;31m    \"evaluated_to\": false,\u001b[0m",
+        "\u001b[0;31m    \"msg\": \"Set AAP_MCP_SERVER_URL and AAP_BEARER_TOKEN environment variables\"\u001b[0m",
+        "\u001b[0;31m}\u001b[0m",
+        "",
+        "PLAY RECAP *********************************************************************",
+        "\u001b[0;31mlocalhost\u001b[0m                  : ok=0    changed=0    unreachable=0    \u001b[0;31mfailed=1   \u001b[0m skipped=0    rescued=0    ignored=0   "
+    ],
+    "version": "2.0.0"
+}

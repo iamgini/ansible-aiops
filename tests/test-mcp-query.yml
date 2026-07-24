@@ -1,0 +1,104 @@
+---
+# Minimal MCP test: connect to AAP MCP server and list job templates
+# Usage:
+#   export AAP_MCP_SERVER_URL="https://aapaio.lab.gineesh.com:8448/job_management/mcp"
+#   export AAP_BEARER_TOKEN="your_token"
+#   ansible-navigator run tests/test-mcp-query.yml -m stdout -v
+
+- name: Setup MCP connection
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    mcp_server_url: "{{ lookup('env', 'AAP_MCP_SERVER_URL') }}"
+    mcp_bearer_token: "{{ lookup('env', 'AAP_BEARER_TOKEN') | default(lookup('env', 'MCP_BEARER_TOKEN'), true) }}"
+
+  tasks:
+    - name: Persist MCP config as facts
+      ansible.builtin.set_fact:
+        mcp_server_url: "{{ mcp_server_url }}"
+        mcp_bearer_token: "{{ mcp_bearer_token }}"
+      no_log: true
+
+    - name: Validate MCP config
+      ansible.builtin.assert:
+        that:
+          - mcp_server_url | length > 0
+          - mcp_bearer_token | length > 0
+        fail_msg: "Set AAP_MCP_SERVER_URL and AAP_BEARER_TOKEN environment variables"
+
+    - name: Show MCP target
+      ansible.builtin.debug:
+        msg: "MCP server: {{ mcp_server_url }}"
+
+    - name: Generate MCP manifest
+      ansible.builtin.copy:
+        content: |
+          {
+            "aap": {
+              "type": "http",
+              "url": "{{ mcp_server_url }}",
+              "args": [],
+              "description": "AAP MCP Server"
+            }
+          }
+        dest: /tmp/test-mcp-manifest.json
+        mode: "0600"
+
+    - name: Add MCP host
+      ansible.builtin.add_host:
+        name: aap_mcp
+        ansible_connection: ansible.mcp.mcp
+        ansible_mcp_server_name: aap
+        ansible_mcp_manifest_path: /tmp/test-mcp-manifest.json
+        ansible_mcp_bearer_token: "{{ mcp_bearer_token }}"
+        ansible_mcp_validate_certs: false
+        ansible_connect_timeout: 30
+        ansible_command_timeout: 60
+
+- name: Query AAP via MCP
+  hosts: aap_mcp
+  gather_facts: false
+
+  environment:
+    MCP_BEARER_TOKEN: "{{ hostvars['localhost']['mcp_bearer_token'] }}"
+
+  tasks:
+    - name: Get MCP server info
+      ansible.mcp.server_info:
+      register: server_info
+
+    - name: Show server info
+      ansible.builtin.debug:
+        msg: "{{ server_info }}"
+
+    - name: List available tools
+      ansible.mcp.tools_info:
+      register: tools_info
+
+    - name: Show available tools
+      ansible.builtin.debug:
+        msg: "{{ tools_info.tools | map(attribute='name') | list }}"
+
+    - name: Query job templates
+      ansible.mcp.run_tool:
+        name: job_templates_list
+        args:
+          page_size: 10
+      register: templates_raw
+
+    - name: Show results
+      ansible.builtin.debug:
+        msg: >-
+          Found {{ ((templates_raw.content[0].text | from_json).results | default([])) | length }} templates:
+          {{ ((templates_raw.content[0].text | from_json).results | default([])) | map(attribute='name') | list }}
+
+- name: Cleanup
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Remove manifest
+      ansible.builtin.file:
+        path: /tmp/test-mcp-manifest.json
+        state: absent
+      changed_when: false
