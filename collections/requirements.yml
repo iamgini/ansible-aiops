@@ -26,8 +26,8 @@ collections:
   - name: ansible.platform
   #   version: ">=1.0.0"
 
-  # AAP Configuration as Code (Required for dynamic JT/WF creation)
-  - name: infra.aap_configuration
+  # AAP Configuration as Code (Optional - not used by default, direct ansible.controller modules used instead)
+  # - name: infra.aap_configuration
 
   # Cryptography (Required for SSL certificate remediation playbook)
   # - name: community.crypto

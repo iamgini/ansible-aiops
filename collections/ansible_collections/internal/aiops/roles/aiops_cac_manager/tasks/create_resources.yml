@@ -1,68 +1,167 @@
 ---
-# Render Jinja2 templates and apply CaC configuration to AAP
-# Uses infra.aap_configuration.dispatch role (same as ansible-aap-cac)
+# Create AAP resources using ansible.controller modules directly
+# No dependency on infra.aap_configuration
 
 - name: Set temp directory path
   ansible.builtin.set_fact:
     aap_cac_temp_dir: "/tmp/aiops-cac-{{ lookup('pipe', 'date +%Y%m%d-%H%M%S') }}"
 
-- name: Create temp directory for rendered CaC templates
-  ansible.builtin.file:
-    path: "{{ aap_cac_temp_dir }}"
-    state: directory
-    mode: '0755'
-
-- name: Render project template
-  ansible.builtin.template:
-    src: project.yml.j2
-    dest: "{{ aap_cac_temp_dir }}/project.yml"
-    mode: '0644'
-
-- name: Render job template definition
-  ansible.builtin.template:
-    src: job_template.yml.j2
-    dest: "{{ aap_cac_temp_dir }}/job_template.yml"
-    mode: '0644'
-
-- name: Render workflow template definition
-  ansible.builtin.template:
-    src: workflow_template.yml.j2
-    dest: "{{ aap_cac_temp_dir }}/workflow_template.yml"
-    mode: '0644'
-
-- name: Load rendered project definition
-  ansible.builtin.include_vars:
-    file: "{{ aap_cac_temp_dir }}/project.yml"
-    name: rendered_project
-
-- name: Load rendered job template definition
-  ansible.builtin.include_vars:
-    file: "{{ aap_cac_temp_dir }}/job_template.yml"
-    name: rendered_jt
-
-- name: Load rendered workflow template definition
-  ansible.builtin.include_vars:
-    file: "{{ aap_cac_temp_dir }}/workflow_template.yml"
-    name: rendered_wf
-
-- name: Set controller variables for dispatch
+- name: Build resource names
   ansible.builtin.set_fact:
-    controller_projects: "{{ rendered_project.controller_projects }}"
-    controller_templates: "{{ rendered_jt.controller_templates }}"
-    controller_workflows: "{{ rendered_wf.controller_workflows }}"
-    controller_hostname: "{{ aap_hostname }}"
-    controller_validate_certs: "{{ aap_validate_certs }}"
+    jt_name: "{{ aap_jt_prefix }}-{{ event_type }}-{{ event_host | regex_replace('\\.', '-') }}"
+    wf_name: "{{ aap_wf_prefix }}-{{ event_type }}-{{ event_host | regex_replace('\\.', '-') }}"
 
-- name: Sync project to pick up merged playbook
-  ansible.builtin.include_role:
-    name: infra.aap_configuration.projects
-  when: aap_sync_project | bool
+- name: Build JT labels
+  ansible.builtin.set_fact:
+    jt_labels: "{{ aap_default_labels + [event_type] + (['severity-' + event_severity] if event_severity is defined else []) }}"
+    wf_labels: "{{ aap_default_labels + ['approval-required', event_type] }}"
 
-- name: Create job template in AAP
-  ansible.builtin.include_role:
-    name: infra.aap_configuration.job_templates
+- name: Build JT extra vars
+  ansible.builtin.set_fact:
+    jt_extra_vars:
+      event_type: "{{ event_type }}"
+      event_host: "{{ event_host }}"
+      event_severity: "{{ event_severity }}"
+      event_description: "{{ event_description | default(omit) }}"
+      event_service: "{{ event_service | default(omit) }}"
 
-- name: Create workflow template in AAP
-  ansible.builtin.include_role:
-    name: infra.aap_configuration.workflow_job_templates
+- name: Create or update project
+  ansible.controller.project:
+    controller_host: "{{ aap_hostname }}"
+    controller_oauthtoken: "{{ controller_oauthtoken }}"
+    validate_certs: "{{ aap_validate_certs }}"
+    name: "{{ aap_project }}"
+    description: "AI-generated remediation playbooks - managed by AIOps"
+    scm_type: git
+    scm_url: "{{ git_remote_url }}"
+    scm_branch: "{{ git_default_branch }}"
+    scm_clean: true
+    scm_update_on_launch: true
+    credential: "{{ aap_scm_credential }}"
+    organization: "{{ aap_organization }}"
+    wait: true
+    update_project: true
+    state: present
 
+- name: Create or update job template
+  ansible.controller.job_template:
+    controller_host: "{{ aap_hostname }}"
+    controller_oauthtoken: "{{ controller_oauthtoken }}"
+    validate_certs: "{{ aap_validate_certs }}"
+    name: "{{ jt_name }}"
+    description: "AI-generated remediation for {{ event_type }} on {{ event_host }} [{{ ai_backend_used | default('unknown') }}]"
+    job_type: run
+    inventory: "{{ aap_inventory }}"
+    project: "{{ aap_project }}"
+    playbook: "{{ git_playbook_dir }}/{{ ai_playbook_filename }}"
+    credentials:
+      - "{{ aap_machine_credential }}"
+    verbosity: 0
+    ask_limit_on_launch: true
+    ask_variables_on_launch: true
+    extra_vars: "{{ jt_extra_vars }}"
+    labels: "{{ jt_labels }}"
+    organization: "{{ aap_organization }}"
+    state: present
+
+- name: Create or update workflow template
+  ansible.controller.workflow_job_template:
+    controller_host: "{{ aap_hostname }}"
+    controller_oauthtoken: "{{ controller_oauthtoken }}"
+    validate_certs: "{{ aap_validate_certs }}"
+    name: "{{ wf_name }}"
+    description: "AI-generated remediation workflow for {{ event_type }} on {{ event_host }}"
+    organization: "{{ aap_organization }}"
+    allow_simultaneous: false
+    ask_variables_on_launch: true
+    extra_vars:
+      event_type: "{{ event_type }}"
+      event_host: "{{ event_host }}"
+      event_severity: "{{ event_severity }}"
+    labels: "{{ wf_labels }}"
+    state: present
+
+- name: Add workflow node - sync project
+  ansible.controller.workflow_job_template_node:
+    controller_host: "{{ aap_hostname }}"
+    controller_oauthtoken: "{{ controller_oauthtoken }}"
+    validate_certs: "{{ aap_validate_certs }}"
+    workflow_job_template: "{{ wf_name }}"
+    identifier: sync-project
+    unified_job_template: "{{ aap_project }}"
+    organization: "{{ aap_organization }}"
+    state: present
+
+- name: Add workflow node - approval
+  ansible.controller.workflow_job_template_node:
+    controller_host: "{{ aap_hostname }}"
+    controller_oauthtoken: "{{ controller_oauthtoken }}"
+    validate_certs: "{{ aap_validate_certs }}"
+    workflow_job_template: "{{ wf_name }}"
+    identifier: approve-remediation
+    approval_node:
+      name: "Approve: {{ event_type }} remediation on {{ event_host }}"
+      description: "Review AI-generated playbook ({{ git_playbook_dir }}/{{ ai_playbook_filename }}) before execution"
+      timeout: "{{ aap_approval_timeout }}"
+    state: present
+
+- name: Add workflow node - run remediation
+  ansible.controller.workflow_job_template_node:
+    controller_host: "{{ aap_hostname }}"
+    controller_oauthtoken: "{{ controller_oauthtoken }}"
+    validate_certs: "{{ aap_validate_certs }}"
+    workflow_job_template: "{{ wf_name }}"
+    identifier: run-remediation
+    unified_job_template: "{{ jt_name }}"
+    organization: "{{ aap_organization }}"
+    state: present
+
+- name: Add workflow node - notify failure
+  ansible.controller.workflow_job_template_node:
+    controller_host: "{{ aap_hostname }}"
+    controller_oauthtoken: "{{ controller_oauthtoken }}"
+    validate_certs: "{{ aap_validate_certs }}"
+    workflow_job_template: "{{ wf_name }}"
+    identifier: notify-failure
+    approval_node:
+      name: "FAILED: {{ event_type }} remediation on {{ event_host }}"
+      description: "Workflow failed - review logs and take manual action"
+      timeout: 0
+    state: present
+
+- name: Link workflow nodes - sync to approval on success
+  ansible.controller.workflow_job_template_node:
+    controller_host: "{{ aap_hostname }}"
+    controller_oauthtoken: "{{ controller_oauthtoken }}"
+    validate_certs: "{{ aap_validate_certs }}"
+    workflow_job_template: "{{ wf_name }}"
+    identifier: sync-project
+    success_nodes:
+      - approve-remediation
+    failure_nodes:
+      - notify-failure
+    state: present
+
+- name: Link workflow nodes - approval to run on success
+  ansible.controller.workflow_job_template_node:
+    controller_host: "{{ aap_hostname }}"
+    controller_oauthtoken: "{{ controller_oauthtoken }}"
+    validate_certs: "{{ aap_validate_certs }}"
+    workflow_job_template: "{{ wf_name }}"
+    identifier: approve-remediation
+    success_nodes:
+      - run-remediation
+    failure_nodes:
+      - notify-failure
+    state: present
+
+- name: Link workflow nodes - run to notify on failure
+  ansible.controller.workflow_job_template_node:
+    controller_host: "{{ aap_hostname }}"
+    controller_oauthtoken: "{{ controller_oauthtoken }}"
+    validate_certs: "{{ aap_validate_certs }}"
+    workflow_job_template: "{{ wf_name }}"
+    identifier: run-remediation
+    failure_nodes:
+      - notify-failure
+    state: present
