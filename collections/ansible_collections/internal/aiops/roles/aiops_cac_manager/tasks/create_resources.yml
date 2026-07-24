@@ -55,23 +55,14 @@
 
 - name: Sync project to pick up merged playbook
   ansible.builtin.include_role:
-    name: infra.aap_configuration.dispatch
-  vars:
-    controller_configuration_dispatcher_roles:
-      - { role: projects, var: controller_projects, tags: projects }
+    name: infra.aap_configuration.projects
   when: aap_sync_project | bool
 
 - name: Create job template in AAP
   ansible.builtin.include_role:
-    name: infra.aap_configuration.dispatch
-  vars:
-    controller_configuration_dispatcher_roles:
-      - { role: job_templates, var: controller_templates, tags: job_templates }
+    name: infra.aap_configuration.job_templates
 
 - name: Create workflow template in AAP
   ansible.builtin.include_role:
-    name: infra.aap_configuration.dispatch
-  vars:
-    controller_configuration_dispatcher_roles:
-      - { role: workflow_job_templates, var: controller_workflows, tags: workflow_job_templates }
+    name: infra.aap_configuration.workflow_job_templates
 
