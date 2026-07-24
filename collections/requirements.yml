@@ -3,9 +3,10 @@
 
 collections:
   - name: ansible.utils
+    source: https://aapaio.lab.gineesh.com/api/galaxy/content/rh-certified/
   # Model Context Protocol Client (Required for MCP integration)
   - name: ansible.mcp
-    # source: https://aapaio.lab.gineesh.com/api/galaxy/content/rh-certified/
+    source: https://aapaio.lab.gineesh.com/api/galaxy/content/rh-certified/
 
   # Event-Driven Automation (Required for rulebooks)
   # - name: ansible.eda
