@@ -37,11 +37,6 @@
     - aap_oauthtoken_url is defined
     - aap_bearer_token | length == 0
 
-- name: Clean up temp CaC directory
-  ansible.builtin.file:
-    path: "{{ aap_cac_temp_dir }}"
-    state: absent
-
 - name: Set CaC Manager results
   ansible.builtin.set_fact:
     cac_completed: true
