@@ -40,5 +40,10 @@ aap_auto_launch_workflow: "{{ lookup('env', 'AAP_AUTO_LAUNCH_WORKFLOW') | defaul
 # Project sync before creating JT (ensures AAP sees the merged playbook)
 aap_sync_project: "{{ lookup('env', 'AAP_SYNC_PROJECT') | default('true', true) }}"
 
+# Git Repository (used in project template to set SCM URL/branch)
+git_remote_url: "{{ lookup('env', 'GIT_REMOTE_URL') | default('https://github.com/iamgini/ansible-ai-generated-playbooks.git', true) }}"
+git_default_branch: "{{ lookup('env', 'GIT_DEFAULT_BRANCH') | default('main', true) }}"
+git_playbook_dir: "{{ lookup('env', 'GIT_PLAYBOOK_DIR') | default('playbooks', true) }}"
+
 # Temp directory for rendered CaC templates
 aap_cac_temp_dir: "/tmp/aiops-cac-{{ lookup('pipe', 'date +%Y%m%d-%H%M%S') }}"
