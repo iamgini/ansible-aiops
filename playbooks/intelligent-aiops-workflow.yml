@@ -73,6 +73,30 @@
     mcp_tool_page_size: 200
 
   tasks:
+    - name: Get MCP server information
+      ansible.mcp.server_info:
+      register: mcp_server_info
+      when: hostvars['localhost']['mcp_configured'] | default(false)
+
+    - name: MCP server info
+      ansible.builtin.debug:
+        msg: "MCP Server: {{ mcp_server_info }}"
+      when:
+        - hostvars['localhost']['mcp_configured'] | default(false)
+        - mcp_server_info is defined
+
+    - name: List available MCP tools
+      ansible.mcp.tools_info:
+      register: mcp_tools_list
+      when: hostvars['localhost']['mcp_configured'] | default(false)
+
+    - name: Available MCP tools
+      ansible.builtin.debug:
+        msg: "{{ mcp_tools_list.tools | default([]) | map(attribute='name') | list }}"
+      when:
+        - hostvars['localhost']['mcp_configured'] | default(false)
+        - mcp_tools_list is defined
+
     - name: Query all job templates from AAP via MCP
       ansible.mcp.run_tool:
         name: "{{ mcp_tool_name }}"
