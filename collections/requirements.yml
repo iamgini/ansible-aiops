@@ -16,14 +16,14 @@ collections:
     # source: https://aapaio.lab.gineesh.com/api/galaxy/content/published/
 
   # Event-Driven Automation (Required for rulebooks)
-  # - name: ansible.eda
+  - name: ansible.eda
   #   version: ">=1.0.0"
 
   # AAP Controller (Required for MCP and configuration)
   - name: ansible.controller
 
   # Platform Integration (Optional)
-  # - name: ansible.platform
+  - name: ansible.platform
   #   version: ">=1.0.0"
 
   # AAP Configuration as Code (Required for dynamic JT/WF creation)
