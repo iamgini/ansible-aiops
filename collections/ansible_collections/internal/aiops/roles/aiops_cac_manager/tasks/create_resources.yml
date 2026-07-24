@@ -56,7 +56,18 @@
     ask_variables_on_launch: true
     state: present
 
-- name: Add approval node
+- name: Add run node
+  ansible.controller.workflow_job_template_node:
+    controller_host: "{{ aap_hostname }}"
+    controller_oauthtoken: "{{ controller_oauthtoken }}"
+    validate_certs: "{{ aap_validate_certs }}"
+    workflow_job_template: "{{ wf_name }}"
+    identifier: run
+    unified_job_template: "{{ jt_name }}"
+    organization: "{{ aap_organization }}"
+    state: present
+
+- name: Add approval node and link to run
   ansible.controller.workflow_job_template_node:
     controller_host: "{{ aap_hostname }}"
     controller_oauthtoken: "{{ controller_oauthtoken }}"
@@ -68,15 +79,4 @@
       timeout: "{{ aap_approval_timeout }}"
     success_nodes:
       - run
-    state: present
-
-- name: Add run node
-  ansible.controller.workflow_job_template_node:
-    controller_host: "{{ aap_hostname }}"
-    controller_oauthtoken: "{{ controller_oauthtoken }}"
-    validate_certs: "{{ aap_validate_certs }}"
-    workflow_job_template: "{{ wf_name }}"
-    identifier: run
-    unified_job_template: "{{ jt_name }}"
-    organization: "{{ aap_organization }}"
     state: present
