@@ -11,17 +11,22 @@
   ansible.builtin.set_fact:
     git_review_branch: "{{ git_review_branch_prefix }}/{{ event_type | lower | regex_replace('[^a-z0-9]', '-') }}-{{ run_id }}"
 
+- name: Build authenticated git URL
+  ansible.builtin.set_fact:
+    git_auth_url: "https://{{ git_username }}:{{ git_token }}@{{ git_remote_url | regex_replace('https?://', '') }}"
+  no_log: true
+
 - name: Retrieve repository and create review branch
   ansible.scm.git_retrieve:
     origin:
-      url: "{{ git_remote_url }}"
-      token: "{{ git_token }}"
+      url: "{{ git_auth_url }}"
     branch:
       name: "{{ git_review_branch }}"
       duplicate_detection: false
     host_key_checking: "{{ 'yes' if git_ssl_verify | bool else 'no' }}"
     timeout: 60
   register: repository
+  # no_log: true
   when: git_token | length > 0
 
 - name: Create playbook directory in cloned repo
@@ -41,7 +46,6 @@
 - name: Publish changes to remote
   ansible.scm.git_publish:
     path: "{{ repository.path }}"
-    token: "{{ git_token }}"
     commit:
       message: "AI-generated playbook: {{ playbook_filename }} [{{ event_type }}]"
     user:
