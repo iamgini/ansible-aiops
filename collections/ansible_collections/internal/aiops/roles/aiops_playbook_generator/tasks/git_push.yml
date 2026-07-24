@@ -7,12 +7,12 @@
 
 - name: Generate unique run ID
   ansible.builtin.set_fact:
-    run_id: "{{ lookup('pipe', 'date +%Y%m%d-%H%M%S') }}"
+    run_id: "{{ lookup('pipe', 'date +%H%M%S') }}"
 
 - name: Set temp clone directory and review branch name
   ansible.builtin.set_fact:
     temp_clone_dir: "/tmp/ansible-aiops-git-{{ run_id }}"
-    git_review_branch: "{{ git_review_branch_prefix }}/{{ event_type | lower | regex_replace('[^a-z0-9]', '-') }}_{{ event_host | regex_replace('\\.', '-') }}_{{ run_id }}"
+    git_review_branch: "{{ git_review_branch_prefix }}/{{ event_type | lower | regex_replace('[^a-z0-9]', '-') }}-{{ run_id }}"
 
 - name: Build authenticated git URL
   ansible.builtin.set_fact:
