@@ -41,4 +41,4 @@ Forbids:
   ansible.builtin.raw module in generated playbooks
   shell tasks containing rm -rf or find -delete without path restrictions
   selinux module with state=disabled
-  Tasks with no_log: false that expose sensitive data
+  Tasks with no_log: true that expose sensitive data
