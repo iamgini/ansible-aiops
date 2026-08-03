@@ -19,17 +19,26 @@ The centerpiece is `playbooks/intelligent-aiops-workflow.yml` using a **3-play a
 - **Play 2** (aap_mcp): Queries AAP via `ansible.mcp.run_tool` with `name: job_templates_list`, stores results on localhost via `delegate_facts`
 - **Play 3** (localhost): Runs `internal.aiops.aiops_mcp_matcher` role for scoring, launching, AI generation, and CaC
 - Uses `ansible.mcp.mcp` connection plugin — MCP host is targeted directly (not via `delegate_to`)
-- Bearer token injected via `environment: MCP_BEARER_TOKEN` for AAP credential type compatibility
+- **Bearer token passed as `ansible_mcp_bearer_token` host var** in `add_host` (NOT via play-level `environment:` — connection plugin reads host vars before env vars are applied)
 - Auto-launches highest-scoring template via `ansible.controller.job_launch` if score >= threshold
 
-**Scoring Algorithm:**
-- Event type in template name: **+50 points**
-- Service name in template name: **+40 points**
-- Hostname in template name: **+30 points**
-- Event type in description: **+20 points**
-- Service name in description: **+20 points**
-- Severity keyword match: **+15 points**
-- Tag match (each): **+10 points**
+**Template Matching Modes** (`mcp_match_using_llm` toggle):
+
+1. **Jinja scoring** (default, `mcp_match_using_llm=false`):
+   - Event type in template name: **+50 points**
+   - Service name in template name: **+40 points**
+   - Hostname in template name: **+30 points**
+   - Event type in description: **+20 points**
+   - Service name in description: **+20 points**
+   - Severity keyword match: **+15 points**
+   - Tag match (each): **+10 points**
+
+2. **LLM matching** (`mcp_match_using_llm=true`):
+   - Trims templates to `{id, name, description}` to minimize token usage
+   - Sends trimmed list + event context to OpenAI-compatible API
+   - LLM returns: `{template_id, template_name, confidence, reason, suggested_extra_vars}`
+   - Reuses same `GENERIC_AI_*` env vars as the playbook generator backend
+   - Files: `tasks/llm_match.yml` and `tasks/jinja_match.yml`
 
 ### 2. Event-Driven Automation
 
@@ -44,6 +53,8 @@ EDA rulebook at `rulebooks/intelligent-remediation.yml`:
 Pluggable AI backends in `aiops_playbook_generator` role:
 - Backends: `generic_api` (default, OpenAI-compatible), `lightspeed_api`, `coder_api`
 - Dynamic include: `backend_{{ ai_backend }}.yml`
+- **SpecDD guardrails**: `files/remediation-guardrails.sdd` defines org-wide safety rules injected into every LLM prompt via shared `tasks/build_prompt.yml`
+- Custom guardrails: override with `-e "guardrails_spec_path=/path/to/custom.sdd"`
 - Git operations via `ansible.scm` (git_retrieve + git_publish)
 - Pushes to review branch: `aiops/<event_type>-<HHMMSS>`
 
@@ -97,6 +108,9 @@ cp .env.example .env
 ### Testing MCP Integration
 
 ```bash
+# Standalone MCP connectivity test (queries job templates via MCP)
+ansible-navigator run tests/test-mcp-query.yml -m stdout
+
 # Run test script (checks connectivity, collections, executes sample playbook)
 ./test-mcp-integration.sh
 
@@ -108,6 +122,14 @@ ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
   -e "event_host=web-server-01" \
   -e "event_severity=high" \
   -e 'event_tags=["web","production"]'
+
+# With LLM-based template matching (instead of Jinja scoring)
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
+  -e "event_type=disk_alert" \
+  -e "event_description='Disk usage at 95%'" \
+  -e "event_host=web-server-01" \
+  -e "event_severity=high" \
+  -e "mcp_match_using_llm=true"
 ```
 
 ### Running EDA Rulebook
@@ -157,6 +179,8 @@ ansible-aiops/
 │   └── intelligent-aiops-workflow.yml     # Orchestrator (MCP matcher + AI generator + CaC)
 ├── rulebooks/
 │   └── intelligent-remediation.yml           # EDA rulebook
+├── tests/
+│   └── test-mcp-query.yml               # Standalone MCP connectivity test
 ├── docs/
 │   ├── ARCHITECTURE.md                   # System architecture diagrams
 │   ├── EDA-MCP-INTEGRATION.md           # Complete integration guide
@@ -164,6 +188,7 @@ ansible-aiops/
 ├── generated-playbooks/                  # Code Assistant-generated playbooks
 ├── requirements.yml                      # Collection dependencies
 ├── inventory.yml                         # Inventory with MCP vars
+├── ansible-navigator.yml                 # Navigator config (EE image, env passthrough)
 ├── generate-and-push.yml                # Code Assistant integration playbook
 ├── test-mcp-integration.sh              # Automated testing
 ├── deploy/
@@ -212,29 +237,22 @@ After deploying, create credential instances in AAP UI and attach them to the AI
 
 ### Modifying the Scoring Algorithm
 
-Edit `collections/ansible_collections/internal/aiops/roles/aiops_mcp_matcher/tasks/main.yml`, find the "Score and rank" task:
+The matcher role supports two modes (controlled by `mcp_match_using_llm`):
 
-```yaml
-- name: Score and rank job templates by relevance
-  ansible.builtin.set_fact:
-    scored_templates: >-
-      {% set templates = [] %}
-      {% for template in unique_matched_templates %}
-        {% set score = 0 %}
-        
-        # Adjust weights here
-        {% if event_type_lower in name_lower %}
-          {% set score = score + 50 %}  # Change this value
-        {% endif %}
-        
-        # Add new scoring rules here
-        
-      {% endfor %}
-```
+**Jinja scoring** (default): Edit `roles/aiops_mcp_matcher/tasks/jinja_match.yml` to adjust weights.
+
+**LLM matching**: Edit `roles/aiops_mcp_matcher/tasks/llm_match.yml` to modify the prompt or response parsing. Uses same `GENERIC_AI_*` env vars as the playbook generator.
 
 Test changes:
 ```bash
-ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout -e "event_type=test" -e "event_description=test" -e "event_host=test" -vv
+# Jinja scoring (default)
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
+  -e "event_type=test" -e "event_description=test" -e "event_host=test" -vv
+
+# LLM matching
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
+  -e "event_type=test" -e "event_description=test" -e "event_host=test" \
+  -e "mcp_match_using_llm=true" -vv
 ```
 
 ### Adding New EDA Rules

@@ -1,0 +1,44 @@
+Spec: AI-Generated Remediation Playbooks
+
+Purpose:
+  Safety guardrails for any playbook the AI generates, regardless of event type.
+  These rules apply to ALL generated remediation playbooks and cannot be overridden
+  by the AI model. The AI has full freedom to handle unknown events but must stay
+  within these boundaries.
+
+Must:
+  Target only the reported host using the event_host variable.
+  Use FQCN (Fully Qualified Collection Names) for all modules.
+  Prefer ansible.builtin modules unless the task specifically requires another collection.
+  Include block/rescue for error handling on critical tasks.
+  Add descriptive task names that explain the remediation action.
+  Use become: true only for tasks that require privilege escalation.
+  Be idempotent - repeated runs must produce the same result without side effects.
+  Check current state before making changes (gather evidence first, act second).
+  Report what changed at the end of the playbook with a summary debug task.
+  Use ansible.builtin.service with state: reloaded when restarting is not required.
+  Limit scope to the specific issue described in the event.
+
+Must not:
+  Delete user data, application data, or databases.
+  Remove packages unless directly related to the remediation.
+  Modify firewall rules or network configuration.
+  Change SSH configuration or authentication settings.
+  Modify user accounts, passwords, or sudo rules.
+  Use shell or command modules when an equivalent Ansible module exists.
+  Include hardcoded credentials, tokens, or secrets.
+  Reboot the host without an explicit approval variable (allow_reboot: true).
+  Stop services without a corresponding restart or recovery step.
+  Make changes to hosts other than the reported event_host.
+  Disable SELinux or AppArmor.
+  Modify kernel parameters without explicit justification in the task name.
+  Write to /root or home directories.
+  Use rm -rf or recursive force-delete in any shell task.
+  Download or execute scripts from the internet.
+
+Forbids:
+  ansible.builtin.reboot without conditional check for allow_reboot variable
+  ansible.builtin.raw module in generated playbooks
+  shell tasks containing rm -rf or find -delete without path restrictions
+  selinux module with state=disabled
+  Tasks with no_log: false that expose sensitive data

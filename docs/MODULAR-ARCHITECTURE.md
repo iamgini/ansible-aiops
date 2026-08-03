@@ -73,8 +73,11 @@ ansible-aiops/
 │       ├── aiops_playbook_generator/     # Role 2: AI generation (pluggable)
 │       │   ├── defaults/main.yml
 │       │   ├── meta/main.yml
+│       │   ├── files/
+│       │   │   └── remediation-guardrails.sdd  # SpecDD safety rules for AI generation
 │       │   └── tasks/
 │       │       ├── main.yml              # Backend selector
+│       │       ├── build_prompt.yml       # Shared prompt builder (reads .sdd spec)
 │       │       ├── backend_lightspeed_api.yml
 │       │       ├── backend_generic_api.yml
 │       │       ├── backend_coder_api.yml
@@ -121,11 +124,12 @@ ansible-aiops/
 
 ### Role 2: `internal.aiops.aiops_playbook_generator`
 
-**Purpose**: Generate Ansible playbooks using AI (pluggable backend).
+**Purpose**: Generate Ansible playbooks using AI (pluggable backend), guided by SpecDD guardrails.
 
 **Inputs** (from playbook):
 - `event_type`, `event_description`, `event_host`, `event_severity`
 - `ai_backend` - `"generic_api"` (default), `"lightspeed_api"`, or `"coder_api"`
+- `guardrails_spec_path` - Path to custom `.sdd` guardrails file (optional, defaults to built-in)
 - Backend-specific configs (URLs, tokens, etc.)
 
 **Outputs** (set_fact):
@@ -134,6 +138,28 @@ ansible-aiops/
 - `ai_playbook_filename` - Generated playbook filename
 - `ai_git_pushed` (bool) - Whether playbook was pushed to git
 - `ai_git_review_branch` - Review branch name (e.g., `aiops/disk-full-150303`)
+
+**SpecDD Guardrails** (`files/remediation-guardrails.sdd`):
+
+The role uses [Spec-Driven Development (SpecDD)](https://github.com/specdd/specdd) to inject safety guardrails into the LLM prompt. The `.sdd` spec defines org-wide rules that apply to ALL generated playbooks regardless of event type:
+
+- **Must** rules: Use FQCN, check state before acting, be idempotent, report changes
+- **Must not** rules: Delete user data, reboot without approval, use `rm -rf`, disable SELinux, modify firewall/SSH/user accounts
+- **Forbids**: Specific dangerous patterns like `ansible.builtin.reboot` without approval checks
+
+The shared `build_prompt.yml` task reads the spec, extracts the Must/Must-not/Forbids sections, and injects them into the LLM prompt before any backend sends it. All three backends use this shared prompt builder.
+
+```
+Event context + Guardrails spec → build_prompt.yml → generation_prompt → LLM backend
+```
+
+To customize guardrails for your organization:
+```bash
+# Use a custom guardrails file
+ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
+  -e "guardrails_spec_path=/path/to/my-org-guardrails.sdd" \
+  -e "event_type=disk_alert" ...
+```
 
 **Git Workflow** (`git_push.yml`):
 - Uses `ansible.scm.git_retrieve` to clone repo and create review branch
@@ -433,14 +459,13 @@ To add a new AI backend (e.g., "ollama", "openai"):
    touch collections/ansible_collections/internal/aiops/roles/aiops_playbook_generator/tasks/backend_ollama.yml
    ```
 
-2. **Implement backend logic**:
+2. **Implement backend logic** (use shared `build_prompt.yml` for guardrails):
    ```yaml
    ---
    # Backend: Ollama (local LLM)
    
-   - name: Build prompt
-     ansible.builtin.set_fact:
-       ollama_prompt: "..."
+   - name: Build prompt from guardrails spec and event context
+     ansible.builtin.include_tasks: build_prompt.yml
    
    - name: Call Ollama API
      ansible.builtin.uri:
@@ -448,10 +473,10 @@ To add a new AI backend (e.g., "ollama", "openai"):
        method: POST
        body:
          model: "llama2"
-         prompt: "{{ ollama_prompt }}"
+         prompt: "{{ generation_prompt }}"
      register: ollama_response
    
-   # ... git clone, save, commit, push ...
+   # ... validate, git clone, save, commit, push ...
    
    - name: Set generation results
      ansible.builtin.set_fact:
@@ -459,6 +484,8 @@ To add a new AI backend (e.g., "ollama", "openai"):
        ai_backend_used: "ollama"
        ai_playbook_filename: "{{ playbook_filename }}"
    ```
+
+   **Important**: Always use `include_tasks: build_prompt.yml` instead of building prompts inline. This ensures the SpecDD guardrails are applied consistently across all backends.
 
 3. **Update role main.yml**:
    ```yaml

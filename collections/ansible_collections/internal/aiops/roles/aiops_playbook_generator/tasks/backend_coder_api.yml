@@ -47,26 +47,15 @@
     selectattr('name', 'equalto', workspace_name) |
     map(attribute='status') | first == 'Running'
 
-- name: Build Claude Code prompt from event context
+- name: Build prompt from guardrails spec and event context
+  ansible.builtin.include_tasks: build_prompt.yml
+
+- name: Extend prompt with Coder-specific instructions
   ansible.builtin.set_fact:
-    claude_prompt: |
-      Create an Ansible playbook to remediate the following issue:
+    generation_prompt: |
+      {{ generation_prompt }}
 
-      Event Type: {{ event_type }}
-      Description: {{ event_description }}
-      Target Host: {{ event_host }}
-      Severity: {{ event_severity }}
-      {% if event_service is defined and event_service | length > 0 %}Service: {{ event_service }}{% endif %}
-      {% if event_tags is defined and event_tags | length > 0 %}Tags: {{ event_tags | join(', ') }}{% endif %}
-
-      Requirements:
-      - Use FQCN (Fully Qualified Collection Names)
-      - Include error handling with block/rescue
-      - Add descriptive task names
-      - Use become: true where needed for privilege escalation
-      - Target the host: {{ event_host }}
-      - Make the playbook idempotent
-      - Save the playbook to: playbooks/{{ event_type | lower | regex_replace('[^a-z0-9]', '_') }}_{{ event_host | regex_replace('\\.', '_') }}.yml
+      Save the playbook to: playbooks/{{ event_type | lower | regex_replace('[^a-z0-9]', '_') }}_{{ event_host | regex_replace('\\.', '_') }}.yml
 
       After creating the playbook:
       1. Run ansible-lint to validate syntax
@@ -81,7 +70,7 @@
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
-      coder ssh {{ workspace_name }} -- bash -c 'echo "{{ claude_prompt }}" | claude --yes'
+      coder ssh {{ workspace_name }} -- bash -c 'echo "{{ generation_prompt }}" | claude --yes'
   register: claude_execution
   timeout: "{{ workspace_timeout }}"
 

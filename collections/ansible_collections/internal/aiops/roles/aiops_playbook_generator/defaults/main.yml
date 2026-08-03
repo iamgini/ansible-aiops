@@ -35,6 +35,12 @@ coder_template_name: "ansible-remediation"
 workspace_timeout: 600  # 10 minutes
 auto_cleanup_workspace: true
 
+# SpecDD Guardrails
+# Path to the .sdd spec file that defines safety rules for AI-generated playbooks.
+# The spec's Must/Must-not/Forbids sections are injected into the LLM prompt.
+# Override to point to a custom org-specific guardrails file.
+guardrails_spec_path: ""  # empty = use role's built-in files/remediation-guardrails.sdd
+
 # Event Context (passed from parent playbook)
 # event_type: ""
 # event_description: ""

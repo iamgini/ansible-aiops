@@ -45,7 +45,29 @@
       "mcp__aap-mcp-security-compliance__credentials_list",
       "Bash(export AAP_MCP_SERVER_URL=\"https://aapaio.lab.gineesh.com:8448/job_management/mcp\")",
       "Bash(export AAP_BEARER_TOKEN=\"dIGv7twpQm8kiqT5NNXgI6cWkVxFHP\")",
-      "Bash(ansible-navigator run *)"
+      "Bash(ansible-navigator run *)",
+      "Bash(sudo du -h --max-depth=1 /)",
+      "Bash(sudo du -h --max-depth=1 /var)",
+      "Bash(sudo du -h --max-depth=1 /usr)",
+      "Bash(sudo du -h --max-depth=1 /var/lib)",
+      "Bash(sudo du *)",
+      "Bash(sudo journalctl *)",
+      "Bash(flatpak list *)",
+      "Bash(sudo dnf5 clean all)",
+      "Bash(sudo dnf clean all)",
+      "Bash(sudo rm -rf /var/cache/PackageKit/hawkey/* /var/cache/PackageKit/metadata/*)",
+      "Bash(sudo abrt-cli list)",
+      "Bash(sudo abrt-cli rm /var/spool/abrt/*)",
+      "Bash(sudo find /tmp -maxdepth 1 -mtime +7 -exec du -sh {} +)",
+      "Bash(rpm -qa --last)",
+      "Bash(sudo dnf5 repoquery --extras)",
+      "Bash(sudo rm -rf /opt/BlueJeans /opt/Lens)",
+      "Bash(sudo ls -lh /var/lib/libvirt/images/ 2>/dev/null)",
+      "Bash(sudo rm -rf /var/spool/abrt/*)",
+      "Bash(sudo ls /var/spool/abrt/)",
+      "Bash(sudo systemctl is-active abrtd)",
+      "Bash(sudo lsof +D /var/spool/abrt)",
+      "Bash(VBoxManage list *)"
     ]
   }
 }

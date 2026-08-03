@@ -1,0 +1,77 @@
+---
+# Shared prompt builder: reads the guardrails .sdd spec and constructs the generation prompt.
+# Called by all backends (generic_api, lightspeed_api, coder_api) before sending to the LLM.
+
+- name: Resolve guardrails spec path
+  ansible.builtin.set_fact:
+    _resolved_spec_path: "{{ guardrails_spec_path | default(role_path + '/files/remediation-guardrails.sdd') }}"
+
+- name: Check if guardrails spec exists
+  ansible.builtin.stat:
+    path: "{{ _resolved_spec_path }}"
+  register: _spec_file
+  delegate_to: localhost
+
+- name: Read guardrails spec
+  ansible.builtin.slurp:
+    src: "{{ _resolved_spec_path }}"
+  register: _spec_content
+  delegate_to: localhost
+  when: _spec_file.stat.exists
+
+- name: Parse Must / Must-not / Forbids from spec
+  ansible.builtin.set_fact:
+    _guardrails_text: "{{ _spec_content.content | b64decode }}"
+  when: _spec_file.stat.exists
+
+- name: Set empty guardrails when no spec found
+  ansible.builtin.set_fact:
+    _guardrails_text: ""
+  when: not _spec_file.stat.exists
+
+- name: Extract spec sections for prompt injection
+  ansible.builtin.set_fact:
+    _spec_sections: |
+      {% if _guardrails_text | length > 0 %}
+      {% set lines = _guardrails_text.split('\n') %}
+      {% set ns = namespace(in_section=false, section='', output=[]) %}
+      {% for line in lines %}
+      {% if line.startswith('Must:') or line.startswith('Must not:') or line.startswith('Forbids:') %}
+      {% set ns.section = line %}
+      {% set ns.in_section = true %}
+      {% set ns.output = ns.output + [line] %}
+      {% elif line.strip() == '' and ns.in_section %}
+      {% set ns.in_section = false %}
+      {% set ns.output = ns.output + [''] %}
+      {% elif ns.in_section and line.startswith('  ') %}
+      {% set ns.output = ns.output + [line] %}
+      {% endif %}
+      {% endfor %}
+      {{ ns.output | join('\n') }}
+      {% endif %}
+
+- name: Build generation prompt
+  ansible.builtin.set_fact:
+    generation_prompt: |
+      Create an Ansible playbook to remediate the following issue:
+
+      Event Type: {{ event_type }}
+      Description: {{ event_description }}
+      Target Host: {{ event_host }}
+      Severity: {{ event_severity }}
+      {% if event_service is defined and event_service | length > 0 %}Service: {{ event_service }}{% endif %}
+      {% if event_tags is defined and event_tags | length > 0 %}Tags: {{ event_tags | join(', ') }}{% endif %}
+
+      {% if _spec_sections | trim | length > 0 %}
+      IMPORTANT - Follow these organizational rules strictly. These are non-negotiable safety guardrails:
+
+      {{ _spec_sections }}
+      {% endif %}
+
+      Additional format requirements:
+      - Return ONLY the YAML playbook content, no markdown fences or explanations
+      {% if ai_validation_errors | default('') | length > 0 %}
+
+      IMPORTANT: The previous attempt failed validation. Fix these errors:
+      {{ ai_validation_errors }}
+      {% endif %}

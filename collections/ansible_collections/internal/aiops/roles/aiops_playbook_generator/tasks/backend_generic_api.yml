@@ -2,31 +2,8 @@
 # Backend: Generic API (OpenAI-compatible chat completions endpoint)
 # Works with: OpenAI, Azure OpenAI, vLLM, Ollama, LiteLLM, and other compatible APIs
 
-- name: Build remediation prompt from event context
-  ansible.builtin.set_fact:
-    generation_prompt: |
-      Create an Ansible playbook to remediate the following issue:
-
-      Event Type: {{ event_type }}
-      Description: {{ event_description }}
-      Target Host: {{ event_host }}
-      Severity: {{ event_severity }}
-      {% if event_service is defined and event_service | length > 0 %}Service: {{ event_service }}{% endif %}
-      {% if event_tags is defined and event_tags | length > 0 %}Tags: {{ event_tags | join(', ') }}{% endif %}
-
-      Requirements:
-      - Use FQCN (Fully Qualified Collection Names)
-      - Include error handling with block/rescue
-      - Add descriptive task names
-      - Use become: true where needed for privilege escalation
-      - Target the host: {{ event_host }}
-      - Make the playbook idempotent
-      - Return ONLY the YAML playbook content, no markdown fences or explanations
-      {% if ai_validation_errors | default('') | length > 0 %}
-
-      IMPORTANT: The previous attempt failed validation. Fix these errors:
-      {{ ai_validation_errors }}
-      {% endif %}
+- name: Build prompt from guardrails spec and event context
+  ansible.builtin.include_tasks: build_prompt.yml
 
 - name: Build API request headers
   ansible.builtin.set_fact:

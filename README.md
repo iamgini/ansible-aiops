@@ -6,7 +6,7 @@ Intelligent event-driven automation using Ansible EDA, MCP (Model Context Protoc
 
 ## Features
 
-- **AI-Powered Playbook Generation**: Uses Ansible Automation Platform's automation coding assistant (formerly Ansible Lightspeed) to generate playbooks based on events
+- **AI-Powered Playbook Generation**: Uses Ansible Automation Platform's automation coding assistant (formerly Ansible Lightspeed) to generate playbooks based on events, guided by [SpecDD guardrails](https://github.com/specdd/specdd) for safety
 - **Intelligent Job Template Matching**: MCP integration to find suitable AAP job templates for events
 - **Event-Driven Automation**: EDA rulebooks for automated responses with multi-source support (Kafka, webhooks, file logs)
 - **Git Integration**: Automatic commit and push of generated playbooks using `ansible.scm` collection
@@ -191,6 +191,7 @@ Event Source → EDA Rulebook → Specific Rules Match?
                                     └── No  → Find Match via MCP
                                               ├── High Score → Auto-launch
                                               └── Low Score → AI Generate Playbook
+                                                    → Apply SpecDD guardrails (.sdd spec)
                                                     → Push to review branch (ansible.scm)
                                                     → Create JT + WF in AAP (scm_branch override)
                                                     → Approval → Run Remediation
@@ -297,6 +298,7 @@ All documentation lives in [`docs/`](docs/):
 | [Scoring Algorithm](docs/SCORING-ALGORITHM.md) | Template matching algorithm details |
 | [Coder Integration](docs/CODER-INTEGRATION.md) | Coder + Claude Code backend |
 | [Remediation Playbooks](docs/REMEDIATION-PLAYBOOKS-SUMMARY.md) | Remediation playbook summary |
+| [SpecDD Guardrails](docs/SPECDD-GUARDRAILS.md) | AI generation safety guardrails |
 | [Testing](tests/TESTING-CURL-EVENTS.md) | curl test events and scripts |
 
 ### External Documentation & Resources
@@ -320,7 +322,7 @@ All documentation lives in [`docs/`](docs/):
 ansible-aiops/
 ├── ansible.cfg                           # collections_path config
 ├── collections/ansible_collections/
-│   └── internal/aiops/                   # Local collection (3 roles)
+│   └── internal/aiops/                   # Local collection (3 roles, SpecDD guardrails)
 ├── playbooks/                            # Orchestrator and remediation playbooks
 ├── rulebooks/                            # EDA rulebooks
 ├── tests/                                # Test scripts and event payloads

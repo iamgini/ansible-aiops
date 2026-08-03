@@ -1,30 +1,8 @@
 ---
 # Backend: Lightspeed (Red Hat Automation Code Assistant API)
 
-- name: Build Code Assistant prompt from event context
-  ansible.builtin.set_fact:
-    lightspeed_prompt: |
-      Create an Ansible playbook to remediate the following issue:
-
-      Event Type: {{ event_type }}
-      Description: {{ event_description }}
-      Target Host: {{ event_host }}
-      Severity: {{ event_severity }}
-      {% if event_service is defined and event_service | length > 0 %}Service: {{ event_service }}{% endif %}
-      {% if event_tags is defined and event_tags | length > 0 %}Tags: {{ event_tags | join(', ') }}{% endif %}
-
-      Requirements:
-      - Use FQCN (Fully Qualified Collection Names)
-      - Include error handling with block/rescue
-      - Add descriptive task names
-      - Use become: true where needed for privilege escalation
-      - Target the host: {{ event_host }}
-      - Make the playbook idempotent
-      {% if ai_validation_errors | default('') | length > 0 %}
-
-      IMPORTANT: The previous attempt failed validation. Fix these errors:
-      {{ ai_validation_errors }}
-      {% endif %}
+- name: Build prompt from guardrails spec and event context
+  ansible.builtin.include_tasks: build_prompt.yml
 
 - name: Generate playbook with Red Hat Code Assistant API
   ansible.builtin.uri:
@@ -35,7 +13,7 @@
       Content-Type: "application/json"
     body_format: json
     body:
-      text: "{{ lightspeed_prompt }}"
+      text: "{{ generation_prompt }}"
     return_content: true
     status_code: 200
     timeout: 180
