@@ -1,0 +1,15 @@
+---
+# Parse generic/Prometheus/webhook payload into standard event variables
+# Generic fields: event_type, host, instance, severity, service, tags, metric, value
+
+- name: Parse generic event
+  ansible.builtin.set_fact:
+    event_type: "{{ raw_event.event_type | default('unknown') }}"
+    event_description: "{{ raw_event.description | default(raw_event.message | default('Unknown event')) }}"
+    event_host: "{{ raw_event.host | default(raw_event.instance | default('localhost')) }}"
+    event_severity: "{{ raw_event.severity | default('medium') }}"
+    event_service: "{{ raw_event.service | default('') }}"
+    event_tags: "{{ raw_event.tags | default([]) }}"
+    event_metric: "{{ raw_event.metric | default('') }}"
+    event_value: "{{ raw_event.value | default('') }}"
+    event_source: "generic"

@@ -30,7 +30,7 @@ aap_wf_prefix: "{{ lookup('env', 'AAP_WF_PREFIX') | default('AIOps-WF-AI', true)
 aap_approval_timeout: "{{ lookup('env', 'AAP_APPROVAL_TIMEOUT') | default(3600, true) }}"
 
 # Workflow auto-launch after creation
-aap_auto_launch_workflow: "{{ lookup('env', 'AAP_AUTO_LAUNCH_WORKFLOW') | default('false', true) }}"
+aap_auto_launch_workflow: "{{ lookup('env', 'AAP_AUTO_LAUNCH_WORKFLOW') | default('true', true) }}"
 
 # Git Repository (used in project template to set SCM URL/branch)
 git_remote_url: "{{ lookup('env', 'GIT_REMOTE_URL') | default('https://github.com/iamgini/ansible-ai-generated-playbooks.git', true) }}"

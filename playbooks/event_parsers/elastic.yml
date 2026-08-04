@@ -1,0 +1,16 @@
+---
+# Parse Elastic alert payload into standard event variables
+# Elastic fields: alert_name, server_hostname, server_ip, service_name,
+#                 alert_action_group, app_code, alert_value
+
+- name: Parse Elastic event
+  ansible.builtin.set_fact:
+    event_type: "{{ raw_event.alert_name | default('unknown') }}"
+    event_description: "{{ raw_event.alert_name | default(raw_event.service_name | default('Unknown event')) }}"
+    event_host: "{{ raw_event.server_hostname | default(raw_event.server_ip | default('localhost')) }}"
+    event_severity: "{{ raw_event.alert_action_group | default('medium') }}"
+    event_service: "{{ raw_event.service_name | default('') }}"
+    event_tags: "{{ raw_event.app_code if raw_event.app_code is iterable and raw_event.app_code is not string else [raw_event.app_code | default('')] }}"
+    event_metric: "{{ raw_event.alert_value | default('') }}"
+    event_value: "{{ raw_event.alert_value | default('') }}"
+    event_source: "elastic"
