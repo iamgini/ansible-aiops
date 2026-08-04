@@ -9,6 +9,11 @@
 # Expects `all_job_templates` to be set by the calling playbook (via MCP query in a separate play).
 # If not set or empty, sets mcp_completed=false so the workflow falls through to AI generation.
 
+- name: Parse MCP templates from raw response
+  ansible.builtin.set_fact:
+    all_job_templates: "{{ (_mcp_raw_response | from_json).results | default([]) }}"
+  when: _mcp_raw_response is defined and _mcp_raw_response | length > 0
+
 - name: Check if templates were retrieved via MCP
   ansible.builtin.set_fact:
     mcp_completed: false
