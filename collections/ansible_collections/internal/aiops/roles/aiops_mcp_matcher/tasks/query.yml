@@ -34,7 +34,18 @@
   delegate_facts: true
   when: job_templates_raw.structured_content is defined and job_templates_raw.structured_content
 
-- name: Parse templates from text MCP content
+- name: Parse templates from MCP text content (already parsed)
+  ansible.builtin.set_fact:
+    all_job_templates: "{{ job_templates_raw.content[0].text.results | default([]) }}"
+  delegate_to: localhost
+  delegate_facts: true
+  when:
+    - job_templates_raw.structured_content is not defined or not job_templates_raw.structured_content
+    - job_templates_raw.content is defined
+    - job_templates_raw.content | length > 0
+    - job_templates_raw.content[0].text is mapping
+
+- name: Parse templates from MCP text content (JSON string)
   ansible.builtin.set_fact:
     all_job_templates: "{{ (job_templates_raw.content[0].text | from_json).results | default([]) }}"
   delegate_to: localhost
@@ -43,6 +54,7 @@
     - job_templates_raw.structured_content is not defined or not job_templates_raw.structured_content
     - job_templates_raw.content is defined
     - job_templates_raw.content | length > 0
+    - job_templates_raw.content[0].text is string
 
 - name: Set empty templates (no MCP data)
   ansible.builtin.set_fact:
@@ -55,4 +67,4 @@
 
 - name: Templates retrieved
   ansible.builtin.debug:
-    msg: "{{ hostvars['localhost']['all_job_templates'] | default([]) | length }} templates found via MCP"
+    msg: "{{ hostvars['localhost']['all_job_templates'] | default([]) | list | length }} templates found via MCP"
