@@ -4,7 +4,7 @@
 
 - name: Trim templates for LLM context
   ansible.builtin.set_fact:
-    templates_for_llm: "{{ all_job_templates | ansible.utils.json_query('[].{id: id, name: name, description: description}') }}"
+    templates_for_llm: "{{ all_job_templates | map('dict2items') | map('selectattr', 'key', 'in', ['id', 'name', 'description']) | map('items2dict') | list }}"
 
 - name: Build LLM matching prompt
   ansible.builtin.set_fact:
