@@ -27,18 +27,31 @@
       page_size: "{{ mcp_tool_page_size }}"
   register: job_templates_raw
 
-- name: Parse and store templates on localhost
+- name: Parse templates from structured MCP content
   ansible.builtin.set_fact:
-    all_job_templates: >-
-      {% if job_templates_raw.structured_content is defined and job_templates_raw.structured_content %}
-        {{ job_templates_raw.structured_content.results | default([]) }}
-      {% elif job_templates_raw.content is defined and job_templates_raw.content | length > 0 %}
-        {{ (job_templates_raw.content[0].text | from_json).results | default([]) }}
-      {% else %}
-        []
-      {% endif %}
+    all_job_templates: "{{ job_templates_raw.structured_content.results | default([]) }}"
   delegate_to: localhost
   delegate_facts: true
+  when: job_templates_raw.structured_content is defined and job_templates_raw.structured_content
+
+- name: Parse templates from text MCP content
+  ansible.builtin.set_fact:
+    all_job_templates: "{{ (job_templates_raw.content[0].text | from_json).results | default([]) }}"
+  delegate_to: localhost
+  delegate_facts: true
+  when:
+    - job_templates_raw.structured_content is not defined or not job_templates_raw.structured_content
+    - job_templates_raw.content is defined
+    - job_templates_raw.content | length > 0
+
+- name: Set empty templates (no MCP data)
+  ansible.builtin.set_fact:
+    all_job_templates: []
+  delegate_to: localhost
+  delegate_facts: true
+  when:
+    - job_templates_raw.structured_content is not defined or not job_templates_raw.structured_content
+    - job_templates_raw.content is not defined or job_templates_raw.content | length == 0
 
 - name: Templates retrieved
   ansible.builtin.debug:

@@ -23,36 +23,36 @@
     scored_templates: >-
       {% set templates = [] %}
       {% for template in (unique_matched_templates | default([])) %}
-        {% set score = 0 %}
+        {% set ns = namespace(score=0) %}
         {% set name_lower = (template.name | default('')) | lower %}
         {% set desc_lower = (template.description | default('')) | lower %}
         {% set event_type_lower = event_type | lower %}
         {% set event_service_lower = (event_service | default('')) | lower %}
         {% set event_host_lower = (event_host | default('')) | lower %}
         {% if event_type_lower in name_lower %}
-          {% set score = score + 50 %}
+          {% set ns.score = ns.score + 50 %}
         {% endif %}
         {% if event_service_lower and event_service_lower in name_lower %}
-          {% set score = score + 40 %}
+          {% set ns.score = ns.score + 40 %}
         {% endif %}
         {% if event_host_lower and event_host_lower in name_lower %}
-          {% set score = score + 30 %}
+          {% set ns.score = ns.score + 30 %}
         {% endif %}
         {% if event_type_lower in desc_lower %}
-          {% set score = score + 20 %}
+          {% set ns.score = ns.score + 20 %}
         {% endif %}
         {% if event_service_lower and event_service_lower in desc_lower %}
-          {% set score = score + 20 %}
+          {% set ns.score = ns.score + 20 %}
         {% endif %}
         {% for tag in (event_tags | default([])) %}
           {% if tag | lower in name_lower or tag | lower in desc_lower %}
-            {% set score = score + 10 %}
+            {% set ns.score = ns.score + 10 %}
           {% endif %}
         {% endfor %}
         {% if event_severity | default('') | lower == 'critical' and ('critical' in name_lower or 'emergency' in name_lower) %}
-          {% set score = score + 15 %}
+          {% set ns.score = ns.score + 15 %}
         {% elif event_severity | default('') | lower == 'high' and ('high' in name_lower or 'urgent' in name_lower) %}
-          {% set score = score + 15 %}
+          {% set ns.score = ns.score + 15 %}
         {% endif %}
         {% set _ = templates.append({
           'id': template.id,
@@ -60,7 +60,7 @@
           'description': template.description | default(''),
           'project': template.summary_fields.project.name | default(''),
           'inventory': template.summary_fields.inventory.name | default(''),
-          'score': score,
+          'score': ns.score,
           'url': template.url | default('')
         }) %}
       {% endfor %}
