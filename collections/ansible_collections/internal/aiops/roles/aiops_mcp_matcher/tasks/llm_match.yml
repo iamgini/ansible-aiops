@@ -2,14 +2,13 @@
 # LLM-based template matching: send trimmed templates + event context to AI API
 # Sets: best_match (dict with id, name, description, score)
 
+- name: Ensure templates are native dicts
+  ansible.builtin.set_fact:
+    all_job_templates: "{{ all_job_templates | list }}"
+
 - name: Trim templates for LLM context
   ansible.builtin.set_fact:
-    templates_for_llm: >-
-      {{ all_job_templates | map('combine', {})
-         | map('dict2items')
-         | map('selectattr', 'key', 'in', ['id', 'name', 'description'])
-         | map('items2dict')
-         | list }}
+    templates_for_llm: "{{ all_job_templates | ansible.utils.json_query('[].{id: id, name: name, description: description}') }}"
 
 - name: Build LLM matching prompt
   ansible.builtin.set_fact:
