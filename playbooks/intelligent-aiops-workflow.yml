@@ -36,10 +36,7 @@
 
     - name: Detect event source
       ansible.builtin.set_fact:
-        detected_source: >-
-          {% if raw_event is defined and raw_event.alert_name is defined %}elastic
-          {% elif raw_event is defined %}generic
-          {% else %}none{% endif %}
+        detected_source: "{% if raw_event.alert_name is defined %}elastic{% elif raw_event is defined %}generic{% else %}none{% endif %}"
       when: raw_event is defined
 
     - name: Parse event ({{ detected_source | default('preset') }})

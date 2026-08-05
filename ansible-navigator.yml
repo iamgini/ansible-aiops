@@ -24,4 +24,5 @@ ansible-navigator:
   mode: stdout
 
   playbook-artifact:
-    enable: false
+    enable: true
+    save-as: ./artifacts/{playbook_name}-{time_stamp}.json

@@ -67,7 +67,9 @@
       "Bash(sudo ls /var/spool/abrt/)",
       "Bash(sudo systemctl is-active abrtd)",
       "Bash(sudo lsof +D /var/spool/abrt)",
-      "Bash(VBoxManage list *)"
+      "Bash(VBoxManage list *)",
+      "Bash(ansible-navigator --version)",
+      "Bash(python3 *)"
     ]
   }
 }
