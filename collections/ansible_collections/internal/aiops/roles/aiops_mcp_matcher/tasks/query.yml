@@ -2,23 +2,24 @@
 # MCP Query: Retrieve job templates from AAP via MCP connection
 # Called from playbook Play 2 (aap_mcp host) via: tasks_from: query.yml
 
-- name: Get MCP server information
-  ansible.mcp.server_info:
-  register: mcp_server_info
-
-- name: MCP server info
-  ansible.builtin.debug:
-    msg: "MCP Server: {{ mcp_server_info }}"
-  when: mcp_server_info is defined
-
-- name: List available MCP tools
-  ansible.mcp.tools_info:
-  register: mcp_tools_list
-
-- name: Available MCP tools
-  ansible.builtin.debug:
-    msg: "{{ mcp_tools_list.tools | default([]) | map(attribute='name') | list }}"
-  when: mcp_tools_list is defined
+## Debug: Uncomment to troubleshoot MCP connectivity
+# - name: Get MCP server information
+#   ansible.mcp.server_info:
+#   register: mcp_server_info
+#
+# - name: MCP server info
+#   ansible.builtin.debug:
+#     msg: "MCP Server: {{ mcp_server_info }}"
+#   when: mcp_server_info is defined
+#
+# - name: List available MCP tools
+#   ansible.mcp.tools_info:
+#   register: mcp_tools_list
+#
+# - name: Available MCP tools
+#   ansible.builtin.debug:
+#     msg: "{{ mcp_tools_list.tools | default([]) | map(attribute='name') | list }}"
+#   when: mcp_tools_list is defined
 
 - name: Query all job templates from AAP via MCP
   ansible.mcp.run_tool:
@@ -27,9 +28,9 @@
       page_size: "{{ mcp_tool_page_size }}"
   register: job_templates_raw
 
-- name: Store raw MCP response on localhost
+- name: Store MCP response on localhost
   ansible.builtin.set_fact:
-    _mcp_raw_response: "{{ job_templates_raw.content[0].text if job_templates_raw.content[0].text is string else (job_templates_raw.content[0].text | to_json) }}"
+    _mcp_raw_response: "{{ job_templates_raw.content[0].text }}"
   delegate_to: localhost
   delegate_facts: true
   when:
@@ -38,5 +39,5 @@
 
 - name: Templates retrieved
   ansible.builtin.debug:
-    msg: "{{ (hostvars['localhost']['_mcp_raw_response'] | from_json).results | default([]) | length }} templates found via MCP"
+    msg: "{{ (hostvars['localhost']['_mcp_raw_response'].results | default([])) | length }} templates found via MCP"
   when: hostvars['localhost']['_mcp_raw_response'] is defined

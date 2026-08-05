@@ -11,6 +11,10 @@ ansible-navigator:
         - AAP_MCP_SERVER_URL
         - AAP_BEARER_TOKEN
         - MCP_BEARER_TOKEN
+        - GENERIC_AI_API_URL
+        - GENERIC_AI_API_TOKEN
+        - GENERIC_AI_MODEL
+        - GENERIC_AI_VALIDATE_CERTS
     volume-mounts:
       - src: ./collections
         dest: /home/gmadappa/ansible/ansible-aiops/collections

@@ -20,7 +20,7 @@ aap_inventory: "{{ lookup('env', 'AAP_INVENTORY') | default('Cac-Demo-Inventory'
 
 # AAP Credentials
 aap_machine_credential: "{{ lookup('env', 'AAP_MACHINE_CREDENTIAL') | default('AIOps-Machine-Credential', true) }}"
-aap_scm_credential: "{{ lookup('env', 'AAP_SCM_CREDENTIAL') | default('Git-SCM', true) }}"
+aap_scm_credential: "{{ lookup('env', 'AAP_SCM_CREDENTIAL') | default('', true) | default(omit, true) }}"
 
 # Dynamic Naming Prefixes
 aap_jt_prefix: "{{ lookup('env', 'AAP_JT_PREFIX') | default('AIOps-AI', true) }}"

@@ -22,7 +22,7 @@ mcp_action: "not_started"
 mcp_score: 0
 
 # MCP Matching Thresholds
-mcp_confidence_threshold: 100
+mcp_confidence_threshold: 80
 mcp_minimum_score: 50
 
 # LLM-based matching (optional — falls back to Jinja scoring when false)
@@ -32,8 +32,7 @@ llm_api_token: "{{ lookup('env', 'GENERIC_AI_API_TOKEN') | default('', true) }}"
 llm_model: "{{ lookup('env', 'GENERIC_AI_MODEL') | default('gpt-4', true) }}"
 llm_validate_certs: "{{ lookup('env', 'GENERIC_AI_VALIDATE_CERTS') | default(false, true) }}"
 
-# AAP Controller Configuration (for job launch)
-controller_host: "{{ lookup('env', 'CONTROLLER_HOST') | default('', true) }}"
-controller_username: "{{ lookup('env', 'CONTROLLER_USERNAME') | default('', true) }}"
-controller_password: "{{ lookup('env', 'CONTROLLER_PASSWORD') | default('', true) }}"
+# AAP Controller Configuration (for job launch — reuses MCP bearer token)
+controller_host: "{{ lookup('env', 'CONTROLLER_HOST') | default(mcp_server_url | urlsplit('scheme') + '://' + mcp_server_url | urlsplit('hostname'), true) }}"
+controller_oauthtoken: "{{ mcp_bearer_token }}"
 controller_verify_ssl: false

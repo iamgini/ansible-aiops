@@ -62,7 +62,7 @@
     timeout: 60
     validate_certs: "{{ llm_validate_certs }}"
   register: llm_response
-  no_log: true
+  no_log: false
 
 - name: Extract LLM response content
   ansible.builtin.set_fact:
@@ -75,7 +75,7 @@
 
 - name: Parse LLM recommendation
   ansible.builtin.set_fact:
-    llm_recommendation: "{{ llm_clean_content | from_json }}"
+    llm_recommendation: "{{ llm_clean_content if llm_clean_content is mapping else (llm_clean_content | from_json) }}"
 
 - name: Show LLM recommendation
   ansible.builtin.debug:

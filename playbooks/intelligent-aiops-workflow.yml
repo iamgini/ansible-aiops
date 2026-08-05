@@ -29,10 +29,15 @@
         mcp_score: 0
 
     # --- Event Parsing: detect source and normalize to standard event_* vars ---
-    - name: Parse raw payload
+    - name: Parse raw payload (JSON string)
       ansible.builtin.set_fact:
-        raw_event: "{{ raw_payload | from_json if raw_payload is string else raw_payload }}"
-      when: raw_payload is defined and raw_payload | length > 0
+        raw_event: "{{ raw_payload | from_json }}"
+      when: raw_payload is defined and raw_payload is string and raw_payload | length > 0
+
+    - name: Parse raw payload (already parsed)
+      ansible.builtin.set_fact:
+        raw_event: "{{ raw_payload }}"
+      when: raw_payload is defined and raw_payload is mapping
 
     - name: Detect event source
       ansible.builtin.set_fact:
@@ -91,35 +96,15 @@
     - name: Execute MCP matcher role (scoring and launch)
       ansible.builtin.include_role:
         name: internal.aiops.aiops_mcp_matcher
-      vars:
-        event_type: "{{ event_type }}"
-        event_description: "{{ event_description }}"
-        event_host: "{{ event_host }}"
-        event_severity: "{{ event_severity }}"
-        event_service: "{{ event_service | default('') }}"
-        event_tags: "{{ event_tags | default([]) }}"
 
     - name: Execute AI playbook generator role
       ansible.builtin.include_role:
         name: internal.aiops.aiops_playbook_generator
-      vars:
-        event_type: "{{ event_type }}"
-        event_description: "{{ event_description }}"
-        event_host: "{{ event_host }}"
-        event_severity: "{{ event_severity }}"
-        event_service: "{{ event_service | default('') }}"
-        event_tags: "{{ event_tags | default([]) }}"
       when: not mcp_completed
 
     - name: Execute CaC Manager to create JT and Workflow in AAP
       ansible.builtin.include_role:
         name: internal.aiops.aiops_cac_manager
-      vars:
-        event_type: "{{ event_type }}"
-        event_description: "{{ event_description }}"
-        event_host: "{{ event_host }}"
-        event_severity: "{{ event_severity }}"
-        event_service: "{{ event_service | default('') }}"
       when:
         - not mcp_completed
         - ai_generation_completed | default(false)

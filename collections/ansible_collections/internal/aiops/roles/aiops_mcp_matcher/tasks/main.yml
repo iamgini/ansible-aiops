@@ -11,8 +11,8 @@
 
 - name: Parse MCP templates from raw response
   ansible.builtin.set_fact:
-    all_job_templates: "{{ (_mcp_raw_response | from_json).results | default([]) }}"
-  when: _mcp_raw_response is defined and _mcp_raw_response | length > 0
+    all_job_templates: "{{ _mcp_raw_response.results | default([]) }}"
+  when: _mcp_raw_response is defined
 
 - name: Check if templates were retrieved via MCP
   ansible.builtin.set_fact:
@@ -47,8 +47,7 @@
 - name: Launch AAP job template (high confidence match)
   ansible.controller.job_launch:
     controller_host: "{{ controller_host }}"
-    controller_username: "{{ controller_username }}"
-    controller_password: "{{ controller_password }}"
+    controller_oauthtoken: "{{ controller_oauthtoken }}"
     validate_certs: "{{ controller_verify_ssl }}"
     job_template: "{{ best_match.name }}"
     limit: "{{ event_host }}"
