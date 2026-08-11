@@ -29,8 +29,14 @@ aap_wf_prefix: "{{ lookup('env', 'AAP_WF_PREFIX') | default('AIOps-WF-AI', true)
 # Approval Node
 aap_approval_timeout: "{{ lookup('env', 'AAP_APPROVAL_TIMEOUT') | default(3600, true) }}"
 
+# Workflow creation (set false to create JT only, no workflow)
+cac_create_workflow: "{{ lookup('env', 'CAC_CREATE_WORKFLOW') | default(true, true) }}"
+
 # Workflow auto-launch after creation
 aap_auto_launch_workflow: "{{ lookup('env', 'AAP_AUTO_LAUNCH_WORKFLOW') | default('true', true) }}"
+
+# JT SCM branch (defaults to review branch; override to git_default_branch for post-merge use)
+cac_jt_scm_branch: "{{ ai_git_review_branch | default(git_default_branch) }}"
 
 # Git Repository (used in project template to set SCM URL/branch)
 git_remote_url: "{{ lookup('env', 'GIT_REMOTE_URL') | default('https://github.com/iamgini/ansible-ai-generated-playbooks.git', true) }}"

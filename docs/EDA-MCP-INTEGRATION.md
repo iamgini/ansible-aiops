@@ -90,6 +90,7 @@ Called from: `playbooks/intelligent-aiops-workflow.yml`
 
 1. **Receives event data** from parent playbook or EDA
 2. **Queries AAP** via `ansible.mcp.run_tool` (`controller_api_v2_job_templates_list`)
+   - **API Fallback**: When the MCP server is unavailable, the role automatically falls back to querying the AAP REST API directly (`/api/v2/job_templates/`) using `ansible.controller` modules. Controlled by the `mcp_api_fallback` flag (default `true`, env: `MCP_API_FALLBACK`). This makes MCP optional for environments where the MCP server is not yet deployed or is temporarily down.
 3. **Matches templates** against event attributes:
    - Event type
    - Service name
@@ -210,8 +211,9 @@ ansible-navigator run playbooks/intelligent-aiops-workflow.yml -m stdout \
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `AAP_MCP_SERVER_URL` | MCP server endpoint | Yes |
+| `AAP_MCP_SERVER_URL` | MCP server endpoint | Yes (unless API fallback) |
 | `AAP_BEARER_TOKEN` | AAP OAuth2 token | Yes |
+| `MCP_API_FALLBACK` | Fall back to AAP REST API when MCP is unavailable (default `true`) | No |
 
 ### Obtaining AAP Bearer Token
 
@@ -354,6 +356,10 @@ ansible_rulebook.cli - ERROR - Terminating: 404, message='Not Found', url='https
 - Verify token validity: Check expiration in AAP UI
 - Confirm RBAC permissions: User needs read access to job templates
 - Check MCP server logs for authentication failures
+
+### MCP Server Unavailable
+
+If the MCP server is down or unreachable, the matcher automatically falls back to the AAP REST API (when `mcp_api_fallback=true`, the default). You will see a log message indicating the fallback. To disable this behavior, set `MCP_API_FALLBACK=false` or pass `-e "mcp_api_fallback=false"`.
 
 ### No Templates Matched
 

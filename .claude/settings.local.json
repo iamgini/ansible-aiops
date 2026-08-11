@@ -69,7 +69,8 @@
       "Bash(sudo lsof +D /var/spool/abrt)",
       "Bash(VBoxManage list *)",
       "Bash(ansible-navigator --version)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(grep *)"
     ]
   }
 }

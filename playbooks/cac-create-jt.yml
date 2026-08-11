@@ -1,0 +1,35 @@
+---
+# CaC: Create Job Template (post code review)
+#
+# Run this after reviewing and merging the AI-generated playbook to main.
+# Creates a production JT in AAP pointing to the main branch — no workflow needed.
+#
+# Usage:
+#   ansible-navigator run playbooks/cac-create-jt.yml -m stdout \
+#     -e "event_type=disk_alert" \
+#     -e "event_host=web-server-01" \
+#     -e "ai_playbook_filename=disk_alert_web-server-01.yml"
+#
+# The JT uses the shared project with scm_branch=main (post-merge).
+# Override with -e "cac_jt_scm_branch=some-branch" if needed.
+
+- name: Create Job Template in AAP (post code review)
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    cac_create_workflow: false
+    cac_jt_scm_branch: "{{ lookup('env', 'GIT_DEFAULT_BRANCH') | default('main', true) }}"
+
+  tasks:
+    - name: Validate required variables
+      ansible.builtin.assert:
+        that:
+          - event_type is defined
+          - event_host is defined
+          - ai_playbook_filename is defined
+        fail_msg: "Required: event_type, event_host, ai_playbook_filename"
+
+    - name: Create JT via CaC Manager
+      ansible.builtin.include_role:
+        name: internal.aiops.aiops_cac_manager

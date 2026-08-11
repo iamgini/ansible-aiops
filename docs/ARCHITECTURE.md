@@ -32,38 +32,44 @@
 │  Template Launch   │                          │  Playbook              │
 └────────────────────┘                          └───────────┬────────────┘
                                                             │
-                                                            │ Query via MCP
-                                                            ▼
-                                         ┌──────────────────────────────────┐
-                                         │     AAP MCP Server (Port 3000)   │
-                                         │                                  │
-                                         │  • OAuth2 Authentication         │
-                                         │  • OpenAPI-based Tools           │
-                                         │  • RBAC Enforcement              │
-                                         │  • Read/Write Mode Control       │
-                                         └───────────┬──────────────────────┘
-                                                     │
-                                                     │ REST API
-                                                     ▼
-                                         ┌──────────────────────────────────┐
-                                         │  Ansible Automation Platform     │
-                                         │                                  │
-                                         │  ┌────────────────────────────┐ │
-                                         │  │  Controller                │ │
-                                         │  │  • Job Templates           │ │
-                                         │  │  • Inventories             │ │
-                                         │  │  • Projects                │ │
-                                         │  └────────────────────────────┘ │
-                                         │  ┌────────────────────────────┐ │
-                                         │  │  Private Automation Hub    │ │
-                                         │  │  • Collections             │ │
-                                         │  └────────────────────────────┘ │
-                                         │  ┌────────────────────────────┐ │
-                                         │  │  EDA Controller            │ │
-                                         │  │  • Rulebooks               │ │
-                                         │  │  • Activations             │ │
-                                         │  └────────────────────────────┘ │
-                                         └──────────────────────────────────┘
+                                               ┌────────────┴────────────┐
+                                               │                        │
+                                          Primary Path            Fallback Path
+                                          (Query via MCP)    (Direct AAP REST API)
+                                               │              mcp_api_fallback=true
+                                               │              query_api.yml
+                                               ▼                        │
+                                ┌───────────────────────────┐           │
+                                │  AAP MCP Server           │           │
+                                │  (Port 3000/8448)         │           │
+                                │                           │           │
+                                │  • OAuth2 Authentication  │           │
+                                │  • OpenAPI-based Tools    │           │
+                                │  • RBAC Enforcement       │           │
+                                │  • Read/Write Mode Control│           │
+                                └─────────────┬─────────────┘           │
+                                              │                         │
+                                              │ REST API                │
+                                              ▼                         │
+                                ┌──────────────────────────────────┐    │
+                                │  Ansible Automation Platform     │◀───┘
+                                │                                  │
+                                │  ┌────────────────────────────┐ │
+                                │  │  Controller                │ │
+                                │  │  • Job Templates           │ │
+                                │  │  • Inventories             │ │
+                                │  │  • Projects                │ │
+                                │  └────────────────────────────┘ │
+                                │  ┌────────────────────────────┐ │
+                                │  │  Private Automation Hub    │ │
+                                │  │  • Collections             │ │
+                                │  └────────────────────────────┘ │
+                                │  ┌────────────────────────────┐ │
+                                │  │  EDA Controller            │ │
+                                │  │  • Rulebooks               │ │
+                                │  │  • Activations             │ │
+                                │  └────────────────────────────┘ │
+                                └──────────────────────────────────┘
 ```
 
 ## Component Interaction Flow
@@ -107,17 +113,26 @@ Monitoring System → EDA Webhook/Kafka/Source → EDA Rulebook
 └─────────────────────────────────────┘
 ```
 
-### 3. Template Discovery (MCP Integration)
+### 3. Template Discovery (MCP Integration with API Fallback)
 
 ```
 ┌────────────────────────────────────────────────────────────┐
 │  internal.aiops.aiops_mcp_matcher role                      │
 ├────────────────────────────────────────────────────────────┤
-│  Step 1: Query MCP Server (via connection plugin)          │
-│    ansible.mcp.run_tool:                                   │
-│      name: job_templates_list                              │
-│      delegate_to: aap_mcp (ansible.mcp.mcp connection)    │
-│      → Returns: All accessible job templates               │
+│  Step 1: Retrieve Job Templates                            │
+│                                                             │
+│    ┌─ Primary: MCP Server (via connection plugin)          │
+│    │   ansible.mcp.run_tool:                               │
+│    │     name: job_templates_list                          │
+│    │     delegate_to: aap_mcp (ansible.mcp.mcp connection)│
+│    │     → Returns: All accessible job templates           │
+│    │                                                       │
+│    └─ Fallback: Direct AAP REST API (query_api.yml)       │
+│        When: MCP skipped, not configured, or query fails   │
+│        Flag: mcp_api_fallback (default true)               │
+│        GET /api/v2/job_templates/                          │
+│        Authorization: Bearer <token>                       │
+│        → Returns: Same template data via REST              │
 │                                                             │
 │  Step 2: Filter & Match                                    │
 │    • Event type in template name                           │
@@ -164,7 +179,7 @@ Monitoring System → EDA Webhook/Kafka/Source → EDA Rulebook
 
 ## Data Flow Diagram
 
-### Successful Auto-Launch Path
+### Successful Auto-Launch Path (via MCP)
 
 ```
 ┌─────────┐     ┌─────────┐     ┌──────────┐     ┌─────────┐     ┌─────────┐
@@ -176,6 +191,24 @@ Monitoring System → EDA Webhook/Kafka/Source → EDA Rulebook
    event          matches       templates        ranked          Job #42
                                                   list            (Score:130)
 ```
+
+### Successful Auto-Launch Path (API Fallback)
+
+When MCP is skipped, not configured, or fails, the matcher queries AAP directly:
+
+```
+┌─────────┐     ┌─────────┐     ┌──────────┐     ┌──────────────┐     ┌─────────┐
+│ Event   │────▶│   EDA   │────▶│Template  │────▶│ AAP REST API │────▶│   AAP   │
+│ Webhook │     │Rulebook │     │  Finder  │     │ /api/v2/     │     │Launch   │
+└─────────┘     └─────────┘     └──────────┘     │ job_templates│     └─────────┘
+    1.              2.               3.           └──────────────┘         5.
+  Receive         No rule       MCP unavail-          4.              Launch
+   event          matches       able; fall         Direct REST       Job #42
+                                back to API        query with        (Score:130)
+                                (query_api.yml)    bearer token
+```
+
+Flag: `mcp_api_fallback` (default `true`). Task file: `query_api.yml`.
 
 ### Manual Selection Path
 
@@ -198,7 +231,7 @@ Monitoring System → EDA Webhook/Kafka/Source → EDA Rulebook
 
 ## MCP Protocol Communication
 
-### Request Flow
+### Request Flow (Primary: MCP)
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -231,6 +264,35 @@ Monitoring System → EDA Webhook/Kafka/Source → EDA Rulebook
 │  • Return filtered results                                   │
 └──────────────────────────────────────────────────────────────┘
 ```
+
+### Request Flow (Fallback: Direct AAP REST API)
+
+When MCP is skipped (`skip_mcp=true`), not configured, or the MCP query fails,
+the `aiops_mcp_matcher` role falls back to querying the AAP Controller REST API
+directly. Controlled by `mcp_api_fallback` (default `true`). Task file: `query_api.yml`.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Ansible Playbook (ansible.builtin.uri)                      │
+└───────────────────────┬──────────────────────────────────────┘
+                        │
+                        │ HTTP GET
+                        │ Authorization: Bearer <token>
+                        │ GET /api/v2/job_templates/
+                        │
+                        ▼
+┌──────────────────────────────────────────────────────────────┐
+│  Ansible Automation Platform (Controller API)                │
+│                                                               │
+│  1. Validate Bearer Token                                    │
+│  2. Apply RBAC Permissions                                   │
+│  3. Return Job Templates                                     │
+└──────────────────────────────────────────────────────────────┘
+```
+
+The fallback produces the same template data structure as the MCP path, so
+downstream scoring (LLM or Jinja) works identically regardless of which
+discovery method was used.
 
 ### MCP Tool Call Example
 
@@ -521,16 +583,36 @@ Reference: [Ansible AIOps Solution Guide](https://ansible-tmm.github.io/solution
 └──────┬───────┘
        │
        ▼
-┌────────────────────────────────────────┐
-│  intelligent-aiops-workflow.yml        │
-│                                        │
-│  1. Query MCP for Templates            │
-│  2. If Score < Threshold:              │
-│     ├─ Build structured prompt         │
-│     ├─ Call Code Assistant API         │
-│     ├─ Validate generated playbook     │
-│     └─ Push to Git Repository          │
-└────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│  intelligent-aiops-workflow.yml                       │
+│                                                       │
+│  1. Query for Templates                               │
+│     ├─ Primary: MCP Server (ansible.mcp.run_tool)    │
+│     └─ Fallback: AAP REST API (query_api.yml)        │
+│        (when MCP skipped/unavailable/fails;           │
+│         flag: mcp_api_fallback, default true)         │
+│                                                       │
+│  2. If Score < Threshold:                             │
+│     ├─ Build structured prompt                        │
+│     ├─ Call Code Assistant API                        │
+│     ├─ Validate generated playbook                    │
+│     └─ Push to Git review branch                      │
+│                                                       │
+│  3. Optional AI Review Pass                           │
+│     (flag: ai_review_enabled, default false)          │
+│     ├─ Second AI pass reviews generated playbook      │
+│     └─ Pushes improved version to <branch>_review     │
+│                                                       │
+│  4. CaC Resource Creation (deferred by default)       │
+│     (flag: cac_after_code_review, default true)       │
+│     ├─ When true: CaC skipped in main workflow        │
+│     │   → Use standalone playbooks/cac-create-jt.yml  │
+│     │     after code review is complete                │
+│     └─ When false: CaC runs inline (legacy behavior)  │
+│        (flag: cac_create_workflow, default true)       │
+│        ├─ true: Creates JT + Approval WF              │
+│        └─ false: JT-only mode (no WF)                 │
+└──────────────────────────────────────────────────────┘
        │
        ▼
 ┌────────────────────────────────────────┐
@@ -548,7 +630,41 @@ Reference: [Ansible AIOps Solution Guide](https://ansible-tmm.github.io/solution
 ┌────────────────────────────────────────┐
 │  Generated Playbook                    │
 │  (Validated & Committed to Git)        │
-└────────────────────────────────────────┘
+│  Branch: aiops/<event_type>-<HHMMSS>   │
+└──────────────────┬─────────────────────┘
+                   │
+        ┌──────────┴──────────┐
+        │ ai_review_enabled?  │
+        └──────────┬──────────┘
+           false   │   true
+        ┌──────────┤──────────┐
+        │          │          ▼
+        │          │  ┌──────────────────────────────┐
+        │          │  │  AI Review Pass               │
+        │          │  │  • Reviews generated playbook  │
+        │          │  │  • Pushes improved version     │
+        │          │  │  • Branch: <branch>_review     │
+        │          │  └──────────┬───────────────────┘
+        │          │             │
+        └──────────┴─────────────┘
+                   │
+        ┌──────────┴──────────────┐
+        │ cac_after_code_review?  │
+        └──────────┬──────────────┘
+           true    │    false
+        ┌──────────┤──────────────┐
+        │          │              ▼
+        ▼          │  ┌──────────────────────────────┐
+  ┌───────────┐    │  │  CaC Inline (legacy)         │
+  │ Deferred  │    │  │  aiops_cac_manager role       │
+  │ (default) │    │  │  • Creates Project, JT, WF    │
+  │ Run later │    │  │  • Auto-launches WF            │
+  │ via cac-  │    │  └──────────────────────────────┘
+  │ create-   │    │
+  │ jt.yml    │    │
+  └───────────┘    │
+                   ▼
+              (Workflow Complete)
 ```
 
 **API Endpoint:**
@@ -557,3 +673,23 @@ lightspeed_url: "http://lightspeed-coding-assistant:8000/api/v0/ai/generations/"
 ```
 
 **See:** [AAP 2.6 Lightspeed Documentation](https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6) for deployment and configuration.
+
+### Deferred CaC Workflow
+
+When `cac_after_code_review=true` (default), the main workflow skips CaC resource
+creation. After a human reviews the generated playbook on the review branch, run
+the standalone playbook to create AAP resources:
+
+```
+┌──────────────────┐     ┌──────────────┐     ┌──────────────────────────┐
+│  Code Review     │────▶│  Operator    │────▶│  cac-create-jt.yml       │
+│  (Git PR/MR)     │     │  Approval    │     │  Creates JT (+ optional  │
+└──────────────────┘     └──────────────┘     │  WF if cac_create_work-  │
+                                               │  flow=true)              │
+                                               └──────────────────────────┘
+```
+
+The `cac_create_workflow` flag (default `true`) in the `aiops_cac_manager` role
+controls whether a workflow template with an approval node is created alongside
+the job template. Set to `false` for JT-only mode when external approval
+processes (Git PR reviews, change management) are already in place.

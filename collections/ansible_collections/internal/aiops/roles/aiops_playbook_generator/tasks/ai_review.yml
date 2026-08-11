@@ -1,0 +1,130 @@
+---
+# AI Review Step
+# Reviews the generated playbook using a second AI pass and pushes
+# the improved version to <original_branch>_review for human comparison.
+# Requires: playbook_content, playbook_filename, ai_git_review_branch
+
+- name: Build AI review prompt
+  ansible.builtin.set_fact:
+    review_prompt: |
+      You are an expert Ansible automation reviewer. Review the following AI-generated
+      remediation playbook for quality, security, best practices, and correctness.
+
+      Event context:
+        Type: {{ event_type }}
+        Description: {{ event_description | default('N/A') }}
+        Host: {{ event_host }}
+        Severity: {{ event_severity | default('N/A') }}
+        Service: {{ event_service | default('N/A') }}
+
+      Generated playbook to review:
+      ```yaml
+      {{ playbook_content }}
+      ```
+
+      Instructions:
+      - Fix any security issues (command injection, hardcoded credentials, missing no_log)
+      - Ensure idempotency (repeated runs produce same state with changed=false)
+      - Add proper error handling using block/rescue where appropriate
+      - Use FQCNs for all modules (e.g. ansible.builtin.debug, not debug)
+      - Verify check mode compatibility
+      - Improve variable naming and task descriptions
+      - Add missing tags for selective execution
+      - Ensure handlers are used for service restarts instead of direct tasks
+
+      Return ONLY the improved YAML playbook. No markdown fences, no explanations.
+      If the playbook is already good, return it unchanged.
+
+- name: Build review API headers
+  ansible.builtin.set_fact:
+    review_api_headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer {{ ai_review_api_token }}"
+  no_log: true
+
+- name: Remove Authorization header when no token provided
+  ansible.builtin.set_fact:
+    review_api_headers:
+      Content-Type: "application/json"
+  when: ai_review_api_token | length == 0
+
+- name: Send playbook for AI review
+  ansible.builtin.uri:
+    url: "{{ ai_review_api_url }}"
+    method: POST
+    headers: "{{ review_api_headers }}"
+    body_format: json
+    body:
+      model: "{{ ai_review_model }}"
+      messages:
+        - role: "user"
+          content: "{{ review_prompt }}"
+      temperature: 0.1
+    return_content: true
+    status_code: 200
+    timeout: 180
+    validate_certs: "{{ ai_review_validate_certs }}"
+  register: review_api_response
+  no_log: true
+
+- name: Extract reviewed playbook content
+  ansible.builtin.set_fact:
+    reviewed_content: "{{ review_api_response.json.choices[0].message.content }}"
+
+- name: Strip markdown code fences from review if present
+  ansible.builtin.set_fact:
+    reviewed_playbook_content: >-
+      {{ reviewed_content | regex_replace('(?s)^```(yaml|yml|ansible)?\n', '') | regex_replace('\n```\s*$', '') }}
+
+- name: Set review branch name
+  ansible.builtin.set_fact:
+    ai_review_branch: "{{ ai_git_review_branch }}_review"
+
+- name: Retrieve repository for review branch
+  ansible.scm.git_retrieve:
+    origin:
+      url: "{{ git_remote_url }}"
+      token: "{{ git_token | urlencode }}"
+    branch:
+      name: "{{ ai_review_branch }}"
+      duplicate_detection: false
+    host_key_checking: "{{ 'yes' if git_ssl_verify | bool else 'no' }}"
+    timeout: 60
+  register: review_repository
+  no_log: true
+  when: git_token | length > 0
+
+- name: Create playbook directory in review clone
+  ansible.builtin.file:
+    path: "{{ review_repository.path }}/{{ git_playbook_dir }}"
+    state: directory
+    mode: '0755'
+  when: git_token | length > 0
+
+- name: Save reviewed playbook to review branch
+  ansible.builtin.copy:
+    content: "{{ reviewed_playbook_content }}"
+    dest: "{{ review_repository.path }}/{{ git_playbook_dir }}/{{ playbook_filename }}"
+    mode: '0644'
+  when: git_token | length > 0
+
+- name: Publish reviewed playbook to remote
+  ansible.scm.git_publish:
+    path: "{{ review_repository.path }}"
+    token: "{{ git_token | urlencode }}"
+    commit:
+      message: "AI review: {{ playbook_filename }} [{{ event_type }}]"
+    user:
+      name: "{{ git_commit_author }}"
+      email: "{{ git_email }}"
+    include:
+      - "{{ git_playbook_dir }}/{{ playbook_filename }}"
+    remove: true
+    timeout: 60
+  register: review_push
+  when: git_token | length > 0
+
+- name: Set review results
+  ansible.builtin.set_fact:
+    ai_review_pushed: "{{ review_push is defined and review_push is not failed }}"
+    ai_review_branch_name: "{{ ai_review_branch }}"

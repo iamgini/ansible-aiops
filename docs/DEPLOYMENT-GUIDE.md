@@ -50,12 +50,19 @@ This deployment integrates with:
 │         AAP Job Template 5: AI Intelligence Workflow                     │
 │                                                                          │
 │  1. Query AAP MCP → Find matching templates                            │
-│     ├─ Score ≥100? → Launch AAP job template ✅                        │
+│     ├─ MCP available → MCP query                                       │
+│     ├─ MCP unavailable + mcp_api_fallback=true → AAP REST API query   │
+│     ├─ Score ≥100? → Launch AAP job template                           │
 │     └─ Score <50?  → Continue to step 2                                │
 │                                                                          │
-│  2. Call Code Assistant API (Lightspeed) → Generate playbook          │
-│  3. Push to Git → ansible-ai-generated-playbooks                       │
-│  4. (Future) Create new AAP job template from generated playbook       │
+│  2. Call AI API → Generate playbook                                    │
+│  3. (Optional) AI Review → LLM reviews generated playbook             │
+│     └─ ai_review_enabled=true → second LLM pass for quality review    │
+│  4. Push to Git → ansible-ai-generated-playbooks                       │
+│  5. CaC: Create AAP job template from generated playbook               │
+│     ├─ cac_after_code_review=true (default) → Skip CaC in workflow    │
+│     │   └─ Run playbooks/cac-create-jt.yml later (after human review) │
+│     └─ cac_after_code_review=false → CaC runs inline                  │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -231,6 +238,13 @@ env:
   GENERIC_AI_MODEL: "{{ generic_ai_model }}"
 ```
 
+> **AI Review env vars:** If you enable the AI review step (`AI_REVIEW_ENABLED=true`),
+> you can optionally set `AI_REVIEW_MODEL`, `AI_REVIEW_API_URL`, `AI_REVIEW_API_TOKEN`,
+> and `AI_REVIEW_VALIDATE_CERTS` to use a different model or endpoint for review.
+> When these are not set, the review step reuses the `GENERIC_AI_*` values above.
+> Add any custom AI review env vars to the Generic AI API credential type injector
+> or pass them as extra variables on the job template.
+
 **Credential Type 3: Git SCM**
 
 **AAP UI → Credential Types → Add:**
@@ -307,6 +321,18 @@ env:
   lightspeed_url: "http://<lightspeed-host>:8000/api/v0/ai/generations/"
   lightspeed_token: "{{ lookup('env', 'LIGHTSPEED_TOKEN') }}"
   git_remote_url: "https://github.com/iamgini/ansible-ai-generated-playbooks"
+
+  # MCP API fallback — query AAP REST API when MCP is unavailable (default: true)
+  # mcp_api_fallback: true
+
+  # AI review step — LLM reviews the generated playbook before commit (default: false)
+  # ai_review_enabled: false
+
+  # CaC after code review — skip inline CaC, run cac-create-jt.yml later (default: true)
+  # cac_after_code_review: true
+
+  # CaC workflow creation — set false to create JT only, no workflow (default: true)
+  # cac_create_workflow: true
   ```
 - Prompt on Launch: `Extra Variables`
 
@@ -318,6 +344,31 @@ event_type: database_slow_query
 event_host: db-server-01
 event_severity: medium
 ```
+
+#### Step 2.6: Standalone CaC Job Template Creation
+
+When `cac_after_code_review` is `true` (the default), the main workflow skips CaC
+resource creation so a human can review the AI-generated playbook first. After
+reviewing and merging the generated playbook into the `main` branch, run the
+standalone CaC playbook to create the AAP job template:
+
+```bash
+ansible-navigator run playbooks/cac-create-jt.yml -m stdout \
+  -e "event_type=database_slow_query" \
+  -e "event_host=db-server-01"
+```
+
+This playbook creates a job template pointing to the `main` branch (not a review
+branch), so it is safe to launch repeatedly. Use it whenever:
+
+- The main workflow deferred CaC (`cac_after_code_review=true`)
+- You want to create a JT for a playbook that was already merged
+- You need to recreate a JT without re-running the full AI pipeline
+
+Control whether a workflow template is also created with `cac_create_workflow`
+(default `true`). To create only the job template, pass
+`-e "cac_create_workflow=false"`. The branch used for the JT SCM reference can
+be overridden with `cac_jt_scm_branch` (defaults to `main`).
 
 ### Phase 3: EDA Activation
 
@@ -492,5 +543,9 @@ curl http://<maya-host>:8000/api/v1/events/generate \
 - ✅ EDA rulebook activated
 - ✅ Event sources configured
 - ✅ End-to-end testing completed
+- ✅ MCP API fallback configured (`mcp_api_fallback` -- AAP REST API used when MCP unavailable)
+- ✅ AI review step configured if needed (`ai_review_enabled`, plus optional `AI_REVIEW_*` env vars)
+- ✅ CaC deferral strategy decided (`cac_after_code_review` -- default defers to post-review)
+- ✅ Standalone CaC tested (`playbooks/cac-create-jt.yml` for post-review JT creation)
 
-**Everything runs in AAP - no local execution needed!** 🎉
+**Everything runs in AAP - no local execution needed!**

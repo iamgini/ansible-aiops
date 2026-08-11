@@ -22,7 +22,9 @@
 
 - name: Launch workflow
   ansible.builtin.include_tasks: launch_workflow.yml
-  when: aap_auto_launch_workflow | bool
+  when:
+    - cac_create_workflow | bool
+    - aap_auto_launch_workflow | bool
 
 - name: Clean up OAuth2 token
   ansible.builtin.uri:
@@ -45,4 +47,6 @@
 
 - name: CaC Manager Summary
   ansible.builtin.debug:
-    msg: "JT: {{ cac_jt_name }} | WF: {{ cac_wf_name }} | Launched: {{ aap_auto_launch_workflow | bool }}"
+    msg: >-
+      JT: {{ cac_jt_name }} (branch={{ cac_jt_scm_branch }})
+      {{ '| WF: ' + cac_wf_name + ' | Launched: ' + (aap_auto_launch_workflow | string) if cac_create_workflow | bool else '| WF: skipped (JT only)' }}

@@ -1,0 +1,29 @@
+---
+# API Fallback: Query AAP REST API directly for job templates (no MCP required)
+# Sets: all_job_templates (same structure as MCP path)
+
+- name: Query job templates from AAP REST API
+  ansible.builtin.uri:
+    url: "{{ controller_host }}/api/v2/job_templates/?page_size={{ mcp_tool_page_size }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ controller_oauthtoken }}"
+      Content-Type: "application/json"
+    validate_certs: "{{ controller_verify_ssl }}"
+    return_content: true
+    status_code: 200
+    timeout: 30
+  register: api_templates_response
+  no_log: true
+
+- name: Set templates from API response
+  ansible.builtin.set_fact:
+    all_job_templates: "{{ api_templates_response.json.results | default([]) }}"
+  when:
+    - api_templates_response is defined
+    - api_templates_response.json.results is defined
+
+- name: API fallback result
+  ansible.builtin.debug:
+    msg: "{{ all_job_templates | length }} templates retrieved via AAP REST API (MCP fallback)"
+  when: all_job_templates is defined and all_job_templates | length > 0

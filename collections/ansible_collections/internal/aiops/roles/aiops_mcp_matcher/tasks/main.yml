@@ -14,7 +14,14 @@
     all_job_templates: "{{ _mcp_raw_response.results | default([]) }}"
   when: _mcp_raw_response is defined
 
-- name: Check if templates were retrieved via MCP
+- name: Fallback to AAP REST API when MCP templates unavailable
+  ansible.builtin.include_tasks: query_api.yml
+  when:
+    - mcp_api_fallback | bool
+    - all_job_templates is not defined or all_job_templates | length == 0
+    - controller_oauthtoken | default('') | length > 0
+
+- name: Check if templates were retrieved
   ansible.builtin.set_fact:
     mcp_completed: false
     mcp_action: "no_templates"

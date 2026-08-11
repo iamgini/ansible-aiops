@@ -37,6 +37,9 @@ cp .env.example .env
 # Edit with your values
 export AAP_MCP_SERVER_URL="https://aap.example.com:8448/job_management/mcp"
 export AAP_BEARER_TOKEN="your_aap_token_here"
+
+# Optional: API fallback when MCP is unavailable (default: true)
+export MCP_API_FALLBACK="true"
 ```
 
 **Get your AAP token:**
@@ -226,9 +229,11 @@ The role uses `ansible.controller.job_launch` (not MCP) for the actual launch.
 
 ### "Cannot connect to MCP server"
 
+- If `mcp_api_fallback=true` (the default), the workflow automatically falls back to the AAP REST API when the MCP server is unreachable. No action is needed unless you require MCP specifically.
 - Check if MCP server is running: `curl $AAP_MCP_SERVER_URL`
 - Verify URL is correct in `.env`
 - Check firewall/network connectivity
+- To disable automatic fallback: `-e "mcp_api_fallback=false"` or `export MCP_API_FALLBACK=false`
 
 ### "Authentication failed"
 

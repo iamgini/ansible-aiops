@@ -35,6 +35,15 @@ coder_template_name: "ansible-remediation"
 workspace_timeout: 600  # 10 minutes
 auto_cleanup_workspace: true
 
+# AI Review Step
+# When enabled, a second AI pass reviews the generated playbook and pushes
+# an improved version to <branch>_review for human comparison.
+ai_review_enabled: "{{ lookup('env', 'AI_REVIEW_ENABLED') | default(false, true) }}"
+ai_review_model: "{{ lookup('env', 'AI_REVIEW_MODEL') | default(generic_ai_model, true) }}"
+ai_review_api_url: "{{ lookup('env', 'AI_REVIEW_API_URL') | default(generic_api_url, true) }}"
+ai_review_api_token: "{{ lookup('env', 'AI_REVIEW_API_TOKEN') | default(generic_api_token, true) }}"
+ai_review_validate_certs: "{{ lookup('env', 'AI_REVIEW_VALIDATE_CERTS') | default(generic_api_validate_certs, true) }}"
+
 # SpecDD Guardrails
 # Path to the .sdd spec file that defines safety rules for AI-generated playbooks.
 # The spec's Must/Must-not/Forbids sections are injected into the LLM prompt.

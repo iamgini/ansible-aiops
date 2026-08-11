@@ -16,6 +16,9 @@ mcp_verify_ssl: false
 mcp_tool_name: "job_templates_list"
 mcp_tool_page_size: 200
 
+# API Fallback: query AAP REST API directly when MCP is unavailable
+mcp_api_fallback: "{{ lookup('env', 'MCP_API_FALLBACK') | default(true, true) }}"
+
 # Role Output Variables (set to safe defaults)
 mcp_completed: false
 mcp_action: "not_started"

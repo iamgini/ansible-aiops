@@ -4,12 +4,13 @@
 
 ```
 playbooks/
-├── remediation_disk-cleanup.yml             ✅ Case 1 (170 lines)
-├── remediation_restart-service.yml          ✅ Case 2 (121 lines)
-├── remediation_investigate-cpu.yml          ✅ Case 3 (214 lines)
-├── remediation_renew-certificate.yml        ✅ Case 4 (213 lines)
-├── intelligent-aiops-workflow.yml           ✅ Case 5 (AI Intelligence)
-└── generate-and-push.yml                    ✅ Standalone tool
+├── remediation_disk-cleanup.yml             Case 1 (170 lines)
+├── remediation_restart-service.yml          Case 2 (121 lines)
+├── remediation_investigate-cpu.yml          Case 3 (214 lines)
+├── remediation_renew-certificate.yml        Case 4 (213 lines)
+├── intelligent-aiops-workflow.yml           Case 5 (AI Intelligence)
+├── cac-create-jt.yml                        Post-review CaC (creates JT/WF)
+└── generate-and-push.yml                    Standalone tool
 
 archive/old-playbooks/                        📦 Archived
 ├── execute-aap-job-template.yml             (No longer needed)
@@ -300,11 +301,11 @@ Or in AAP, add to project requirements.
 
 | Metric | Count |
 |--------|-------|
-| **Total Playbooks** | 4 remediation + 2 workflows = 6 |
+| **Total Playbooks** | 4 remediation + 3 workflows = 7 |
 | **Total Lines** | 718 (remediation only) |
 | **Average Complexity** | 180 lines per playbook |
 | **Test Events** | 4 (one per remediation case) |
-| **AAP Job Templates** | 5 (4 remediation + 1 AI) |
+| **AAP Job Templates** | 6 (4 remediation + 1 AI + 1 post-review CaC) |
 | **Archived Files** | 3 (old/superseded playbooks) |
 
 ---

@@ -22,6 +22,13 @@
     msg: "AI generation failed after {{ ai_max_retries }} attempts. Last errors: {{ ai_validation_errors }}"
   when: not (ai_validation_passed | bool)
 
+- name: Run AI review on generated playbook
+  ansible.builtin.include_tasks: ai_review.yml
+  when:
+    - ai_review_enabled | bool
+    - ai_validation_passed | bool
+    - ai_git_pushed | default(false) | bool
+
 - name: AI Playbook Generator Summary
   ansible.builtin.debug:
-    msg: "Backend: {{ ai_backend_used }} | Playbook: {{ git_playbook_dir }}/{{ ai_playbook_filename }} | Validation: {{ 'skipped' if ai_skip_validation | bool else 'passed' }} | Git: pushed={{ ai_git_pushed }} branch={{ ai_git_review_branch | default('N/A') }}"
+    msg: "Backend: {{ ai_backend_used }} | Playbook: {{ git_playbook_dir }}/{{ ai_playbook_filename }} | Validation: {{ 'skipped' if ai_skip_validation | bool else 'passed' }} | Git: pushed={{ ai_git_pushed }} branch={{ ai_git_review_branch | default('N/A') }}{{ ' | Review: branch=' + ai_review_branch_name if ai_review_pushed | default(false) else '' }}"

@@ -4,7 +4,7 @@
 
 Complete event-driven intelligent remediation system:
 - **Known events** → Direct AAP job template launch
-- **Unknown events** → MCP search → Maya generation → Git push
+- **Unknown events** → MCP search (with API fallback) → AI generation → AI review → Git push → Deferred CaC
 
 ## Architecture
 
@@ -33,13 +33,20 @@ Complete event-driven intelligent remediation system:
                     │                                    │
         ┌───────────▼───────────┐           ┌────────────▼────────────┐
         │ Launch AAP Job        │           │ 1. Query MCP            │
-        │ Template Directly     │           │ 2. If score ≥100:       │
-        │                       │           │    Launch AAP           │
-        │ ✅ Done!              │           │ 3. If score <50:        │
-        └───────────────────────┘           │    Call Maya API        │
+        │ Template Directly     │           │    (API fallback if     │
+        │                       │           │     MCP unavailable)    │
+        │ Done!                 │           │ 2. If score >=100:      │
+        └───────────────────────┘           │    Launch AAP           │
+                                            │ 3. If score <50:        │
+                                            │    AI playbook gen      │
                                             │ 4. Save to Git          │
+                                            │ 5. AI review (optional) │
+                                            │    push to _review br   │
+                                            │ 6. CaC (deferred until  │
+                                            │    after code review    │
+                                            │    by default)          │
                                             │                         │
-                                            │ ✅ Done!                │
+                                            │ Done!                   │
                                             └─────────────────────────┘
 ```
 
@@ -78,13 +85,25 @@ export CONTROLLER_VERIFY_SSL="false"
 export AAP_MCP_SERVER_URL="https://aap.example.com:8448/job_management/mcp"
 export AAP_BEARER_TOKEN="your_aap_oauth_token"
 
+# MCP API Fallback (default: true - falls back to AAP REST API when MCP unavailable)
+export MCP_API_FALLBACK="true"
+
 # Git Configuration (Optional - for storing generated playbooks)
 export GIT_TOKEN="ghp_your_github_token"
 export GIT_USERNAME="iamgini"
 export GIT_EMAIL="your_email@example.com"
 
-# Ansible Maya (Required for unknown events)
-# Maya API runs on localhost:8000 by default
+# AI Review (Optional - second AI pass reviews generated playbook)
+export AI_REVIEW_ENABLED="false"           # Enable AI review step (default: false)
+export AI_REVIEW_MODEL="gpt-4"             # Model for review pass
+export AI_REVIEW_API_URL="http://localhost:11434/v1/chat/completions"
+export AI_REVIEW_API_TOKEN="your_token"    # API token for review backend
+
+# CaC Deferral (default: true - defer CaC until after code review)
+export CAC_AFTER_CODE_REVIEW="true"
+
+# AI Backend (Required for unknown events)
+# Generic AI API runs on localhost:11434 by default
 ```
 
 ## Quick Start
@@ -225,9 +244,18 @@ Edit `playbooks/intelligent-aiops-workflow.yml`:
 
 ```yaml
 vars:
-  mcp_confidence_threshold: 100  # Auto-launch if score ≥ this
-  mcp_minimum_score: 50          # Skip to Maya if score < this
+  mcp_confidence_threshold: 100  # Auto-launch if score >= this
+  mcp_minimum_score: 50          # Skip to AI generation if score < this
 ```
+
+### Feature Flags
+
+| Flag | Default | Env Var | Description |
+|------|---------|---------|-------------|
+| `mcp_api_fallback` | `true` | `MCP_API_FALLBACK` | Fall back to AAP REST API when MCP is unavailable |
+| `ai_review_enabled` | `false` | `AI_REVIEW_ENABLED` | Run a second AI pass to review the generated playbook; pushes reviewed version to `<branch>_review` |
+| `cac_after_code_review` | `true` | `CAC_AFTER_CODE_REVIEW` | Defer CaC resource creation until after code review. Use `playbooks/cac-create-jt.yml` post-review |
+| `cac_create_workflow` | `true` | N/A | When `false`, CaC creates a JT only (no workflow template) |
 
 ## Monitoring
 
@@ -322,12 +350,12 @@ export GIT_EMAIL="your_email@example.com"
 You now have a complete intelligent remediation system:
 
 - **4 known event types** → Direct AAP job launches
-- **Unknown events** → MCP search → Maya generation → Git storage
+- **Unknown events** → MCP search (with automatic API fallback) → AI generation → optional AI review → Git push → deferred CaC (post-review JT creation via `cac-create-jt.yml`)
 - **Production-ready** → Just configure your AAP job templates!
 
 **Current Status:**
-- ✅ Rulebook created
-- ✅ Action playbooks created  
-- ✅ Test events created
-- ✅ Ready to run
-- ⏸️ **Waiting for your instruction** on AAP job template creation
+- Rulebook created
+- Action playbooks created
+- Test events created
+- Ready to run
+- **Waiting for your instruction** on AAP job template creation

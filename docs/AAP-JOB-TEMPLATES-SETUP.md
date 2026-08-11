@@ -226,6 +226,10 @@ You need to create **5 AAP job templates** that the EDA rulebook will launch:
   event_tags: []
   event_metric: ""
   event_value: ""
+  ai_review_enabled: false        # Enable AI review of generated playbook
+  cac_after_code_review: true     # Defer CaC until after code review
+  mcp_api_fallback: true          # Fall back to AAP REST API if MCP unavailable
+  cac_create_workflow: true       # Set false to create JT only (no workflow)
   ```
 - **Prompt on Launch:**
   - ✅ Extra Variables
@@ -242,6 +246,33 @@ You need to create **5 AAP job templates** that the EDA rulebook will launch:
   ```
 
 **Note:** This job template uses the playbook you already have: `intelligent-aiops-workflow.yml`
+
+---
+
+### Job Template 6: CaC - Create Job Template (Post-Review)
+
+**Purpose:** Create AAP job template and optional workflow after code review of an AI-generated playbook. Used when `cac_after_code_review=true` (the default) to run CaC creation as a separate step after the generated playbook has been reviewed.
+
+**Details:**
+- **Name:** `AIOps - Create Job Template`
+- **Job Type:** Run
+- **Inventory:** localhost
+- **Project:** ansible-aiops project
+- **Playbook:** `playbooks/cac-create-jt.yml`
+- **Credentials:**
+  - Machine credential (localhost)
+  - AAP credential (for controller API access)
+  - Source Control credential (for Git access)
+- **Variables:** (Prompted)
+  ```yaml
+  event_type: ""
+  review_branch: ""               # The git branch containing the reviewed playbook
+  cac_create_workflow: true        # Set false to create JT only (no workflow)
+  ```
+- **Prompt on Launch:**
+  - Extra Variables
+
+**Note:** This template is launched manually (or via automation) after the AI-generated playbook has been reviewed and approved. It creates the AAP job template (and optionally the approval workflow) pointing to the reviewed branch.
 
 ---
 
@@ -396,13 +427,14 @@ See [Testing with curl - Sample Events](../tests/TESTING-CURL-EVENTS.md) for all
 
 ## Summary
 
-**5 Job Templates to Create:**
+**6 Job Templates to Create:**
 
-1. ✅ `Remediate Disk Space` - Disk cleanup
-2. ✅ `Restart Service` - Service restart
-3. ✅ `Investigate High CPU` - CPU troubleshooting
-4. ✅ `Renew SSL Certificate` - Certificate renewal
-5. ✅ `AI Intelligence - Unknown Event Remediation` - MCP + Maya workflow
+1. `Remediate Disk Space` - Disk cleanup
+2. `Restart Service` - Service restart
+3. `Investigate High CPU` - CPU troubleshooting
+4. `Renew SSL Certificate` - Certificate renewal
+5. `AI Intelligence - Unknown Event Remediation` - MCP + AI workflow
+6. `AIOps - Create Job Template` - Post-review CaC (creates JT/WF from reviewed playbook)
 
 **EDA Rulebook:**
 - ✅ `intelligent-remediation.yml` - Routes events to job templates

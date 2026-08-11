@@ -182,6 +182,7 @@ Unknown event arrives
     │
     ▼
 MCP Matcher → no existing template found (score < threshold)
+    (API fallback if MCP unavailable, mcp_api_fallback=true)
     │
     ▼
 Playbook Generator:
@@ -193,8 +194,18 @@ Playbook Generator:
     5. Validate generated playbook
     6. Push to review branch (not main)
     │
+    ▼ (if ai_review_enabled=true)
+AI Review:
+    7. Second AI pass reviews the generated playbook
+    8. Pushes reviewed version to <branch>_review
+    │
     ▼
-CaC Manager → creates JT + Workflow in AAP → approval gate → run
+CaC Manager:
+    - If cac_after_code_review=true (default): CaC deferred.
+      Run playbooks/cac-create-jt.yml after human review.
+    - If cac_after_code_review=false: CaC runs immediately.
+    - If cac_create_workflow=false: creates JT only (no workflow).
+    - Otherwise: creates JT + Workflow in AAP → approval gate → run
 ```
 
 The AI handles the unknown. The spec handles the non-negotiable.

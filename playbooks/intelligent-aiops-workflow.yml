@@ -91,6 +91,7 @@
 
   vars:
     ai_backend: "{{ lookup('env', 'AI_BACKEND') | default('generic_api', true) }}"
+    cac_after_code_review: "{{ lookup('env', 'CAC_AFTER_CODE_REVIEW') | default(true, true) }}"
 
   tasks:
     - name: Execute MCP matcher role (scoring and launch)
@@ -102,10 +103,19 @@
         name: internal.aiops.aiops_playbook_generator
       when: not mcp_completed
 
+    - name: CaC skipped — run cac-create-jt.yml after code review
+      ansible.builtin.debug:
+        msg: "CaC deferred to post-review. Run cac-create-jt.yml after merging {{ ai_git_review_branch | default('N/A') }} to main."
+      when:
+        - cac_after_code_review | bool
+        - not mcp_completed
+        - ai_generation_completed | default(false)
+
     - name: Execute CaC Manager to create JT and Workflow in AAP
       ansible.builtin.include_role:
         name: internal.aiops.aiops_cac_manager
       when:
+        - not (cac_after_code_review | bool)
         - not mcp_completed
         - ai_generation_completed | default(false)
         - ai_git_pushed | default(false)
@@ -123,5 +133,6 @@
              if mcp_completed else
              'AI Generated' +
              ' | branch=' + (ai_git_review_branch | default('N/A')) +
-             ' | CaC JT=' + (cac_jt_name | default('N/A')) +
-             ' WF=' + (cac_wf_name | default('N/A')) }}
+             (' | Review: ' + (ai_review_branch_name | default('N/A')) if ai_review_pushed | default(false) else '') +
+             (' | CaC JT=' + (cac_jt_name | default('N/A')) + ' WF=' + (cac_wf_name | default('N/A'))
+               if not (cac_after_code_review | bool) else ' | CaC: deferred to post-review') }}

@@ -37,7 +37,7 @@
     inventory: "{{ aap_inventory }}"
     project: "{{ aap_project }}"
     playbook: "{{ git_playbook_dir }}/{{ ai_playbook_filename }}"
-    scm_branch: "{{ ai_git_review_branch }}"
+    scm_branch: "{{ cac_jt_scm_branch }}"
     credentials:
       - "{{ aap_machine_credential }}"
     ask_limit_on_launch: true
@@ -55,6 +55,7 @@
     organization: "{{ aap_organization }}"
     ask_variables_on_launch: true
     state: present
+  when: cac_create_workflow | bool
 
 - name: Add approval node
   ansible.controller.workflow_job_template_node:
@@ -67,6 +68,7 @@
       name: "Approve: {{ event_type }} on {{ event_host }}"
       timeout: "{{ aap_approval_timeout }}"
     state: present
+  when: cac_create_workflow | bool
 
 - name: Add run node
   ansible.controller.workflow_job_template_node:
@@ -78,6 +80,7 @@
     unified_job_template: "{{ jt_name }}"
     organization: "{{ aap_organization }}"
     state: present
+  when: cac_create_workflow | bool
 
 - name: Link approval to run on success
   ansible.controller.workflow_job_template_node:
@@ -89,3 +92,4 @@
     success_nodes:
       - run
     state: present
+  when: cac_create_workflow | bool
