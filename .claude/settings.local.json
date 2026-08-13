@@ -70,7 +70,10 @@
       "Bash(VBoxManage list *)",
       "Bash(ansible-navigator --version)",
       "Bash(python3 *)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(ansible-lint --version)",
+      "Bash(ansible-lint -p --nocolor)",
+      "Bash(ansible-lint -p --nocolor --offline)"
     ]
   }
 }

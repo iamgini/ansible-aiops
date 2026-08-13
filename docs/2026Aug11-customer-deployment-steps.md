@@ -127,10 +127,42 @@ export MCP_API_FALLBACK="false"            # no REST API fallback
 | `cac_jt_scm_branch` | review branch | — | Branch the JT points to (override to `main` post-merge) |
 | `mcp_api_fallback` | `true` | `MCP_API_FALLBACK` | Query AAP REST API when MCP unavailable |
 
-## New Files Added
+## Files Changed
 
-| File | Purpose |
-|------|---------|
-| `roles/aiops_playbook_generator/tasks/ai_review.yml` | AI review step — reviews and pushes to `<branch>_review` |
-| `roles/aiops_mcp_matcher/tasks/query_api.yml` | AAP REST API fallback — queries `/api/v2/job_templates/` |
-| `playbooks/cac-create-jt.yml` | Standalone CaC — creates JT only, pointing to `main` |
+### New Files
+
+```
+playbooks/cac-create-jt.yml
+collections/ansible_collections/internal/aiops/roles/aiops_playbook_generator/tasks/ai_review.yml
+collections/ansible_collections/internal/aiops/roles/aiops_mcp_matcher/tasks/query_api.yml
+```
+
+### Modified Files
+
+```
+CLAUDE.md
+ansible-navigator.yml
+playbooks/intelligent-aiops-workflow.yml
+collections/ansible_collections/internal/aiops/roles/aiops_playbook_generator/defaults/main.yml
+collections/ansible_collections/internal/aiops/roles/aiops_playbook_generator/tasks/main.yml
+collections/ansible_collections/internal/aiops/roles/aiops_cac_manager/defaults/main.yml
+collections/ansible_collections/internal/aiops/roles/aiops_cac_manager/tasks/main.yml
+collections/ansible_collections/internal/aiops/roles/aiops_cac_manager/tasks/create_resources.yml
+collections/ansible_collections/internal/aiops/roles/aiops_mcp_matcher/defaults/main.yml
+collections/ansible_collections/internal/aiops/roles/aiops_mcp_matcher/tasks/main.yml
+```
+
+### Updated Documentation
+
+```
+docs/ARCHITECTURE.md
+docs/DEPLOYMENT-GUIDE.md
+docs/EDA-MCP-INTEGRATION.md
+docs/QUICKSTART.md
+docs/INTELLIGENT-REMEDIATION-QUICKSTART.md
+docs/MODULAR-ARCHITECTURE.md
+docs/AAP-JOB-TEMPLATES-SETUP.md
+docs/REMEDIATION-PLAYBOOKS-SUMMARY.md
+docs/SPECDD-GUARDRAILS.md
+docs/CODER-INTEGRATION.md
+```
