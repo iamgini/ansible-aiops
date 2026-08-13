@@ -4,7 +4,7 @@
 
 - name: Query job templates from AAP REST API
   ansible.builtin.uri:
-    url: "{{ controller_host }}/api/v2/job_templates/?page_size={{ mcp_tool_page_size }}"
+    url: "{{ controller_host }}/api/controller/v2/job_templates/?page_size={{ mcp_tool_page_size }}"
     method: GET
     headers:
       Authorization: "Bearer {{ controller_oauthtoken }}"
