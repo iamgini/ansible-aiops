@@ -94,7 +94,7 @@
     cac_after_code_review: "{{ lookup('env', 'CAC_AFTER_CODE_REVIEW') | default(true, true) }}"
 
   tasks:
-    - name: Execute MCP matcher role (scoring and launch)
+    - name: Execute template matcher (scoring and launch)
       ansible.builtin.include_role:
         name: internal.aiops.aiops_mcp_matcher
 
@@ -129,7 +129,7 @@
     - name: Workflow Summary
       ansible.builtin.debug:
         msg: >-
-          {{ 'MCP matched: ' + mcp_template_name + ' (score=' + (mcp_score | string) + ', job=' + (mcp_job_id | string) + ')'
+          {{ 'Template matched: ' + mcp_template_name + ' (score=' + (mcp_score | string) + ', job=' + (mcp_job_id | string) + ')'
              if mcp_completed else
              'AI Generated' +
              ' | branch=' + (ai_git_review_branch | default('N/A')) +
