@@ -117,23 +117,26 @@
     # CASE 5: Unknown Event - AI Intelligence Workflow
     # =========================================================================
     # This catches ALL events that don't match above rules
-    # Launches AAP job template that runs:
-    #   MCP Search → Code Assistant Generation → Git Push → (Future: Create Job Template)
+    # Launches AAP workflow:
+    #   JT1 (AI Generate + Review + Git Push) → Approval Node → JT2 (CaC Create JT)
+    # Requires "Prompt on launch" enabled for Variables on the WF Template in AAP
     # =========================================================================
-    - name: Unknown Event - Launch AI Intelligence Job Template
+    - name: Unknown Event - Launch AI Intelligence Workflow
       condition: event.payload is defined
       action:
-        run_job_template:
-          name: "AI Intelligence - Unknown Event Remediation"
+        run_workflow_template:
+          name: "AIOps-WF-AI-Intelligence"
           organization: "AIOps"
           job_args:
             extra_vars:
               raw_payload: "{{ event.payload.body | default('') }}"
-              # event_type: "{{ event.payload.event_type | default('unknown') }}"
-              # event_description: "{{ event.payload.description | default(event.payload.message | default('Unknown event')) }}"
-              # event_host: "{{ event.payload.host | default(event.payload.instance | default('localhost')) }}"
-              # event_severity: "{{ event.payload.severity | default('medium') }}"
-              # event_service: "{{ event.payload.service | default('') }}"
-              # event_tags: "{{ event.payload.tags | default([]) }}"
-              # event_metric: "{{ event.payload.metric | default('') }}"
-              # event_value: "{{ event.payload.value | default('') }}"
+    # --- Alternative: use run_job_template for customers without the WF ---
+    # - name: Unknown Event - Launch AI Intelligence Job Template
+    #   condition: event.payload is defined
+    #   action:
+    #     run_job_template:
+    #       name: "AI Intelligence - Unknown Event Remediation"
+    #       organization: "AIOps"
+    #       job_args:
+    #         extra_vars:
+    #           raw_payload: "{{ event.payload.body | default('') }}"
