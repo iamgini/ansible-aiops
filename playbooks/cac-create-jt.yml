@@ -50,6 +50,15 @@
         msg: "source={{ event_source | default('preset') }} type={{ event_type }} host={{ event_host }} severity={{ event_severity | default('') }}"
       when: event_type is defined
 
+    - name: Skip CaC — template already matched and launched by JT1
+      ansible.builtin.debug:
+        msg: "Existing template was matched and launched in JT1 — no CaC needed"
+      when: mcp_completed | default(false) | bool
+
+    - name: End play when template already matched
+      ansible.builtin.meta: end_play
+      when: mcp_completed | default(false) | bool
+
     - name: Validate required variables
       ansible.builtin.assert:
         that:

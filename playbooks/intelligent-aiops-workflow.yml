@@ -129,13 +129,9 @@
     - name: Export artifacts for downstream JTs in AAP workflow
       ansible.builtin.set_stats:
         data:
+          mcp_completed: "{{ mcp_completed | default(false) }}"
           ai_playbook_filename: "{{ ai_playbook_filename | default('') }}"
-          event_type: "{{ event_type | default('') }}"
-          event_host: "{{ event_host | default('') }}"
-          event_severity: "{{ event_severity | default('') }}"
-          event_description: "{{ event_description | default('') }}"
         per_host: false
-      when: ai_generation_completed | default(false)
 
     - name: Workflow Summary
       ansible.builtin.debug:
