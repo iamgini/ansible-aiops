@@ -21,6 +21,7 @@ ansible-navigator:
         - AI_REVIEW_API_TOKEN
         - AI_REVIEW_VALIDATE_CERTS
         - MCP_API_FALLBACK
+        - AAP_AUTO_LAUNCH_JT
     volume-mounts:
       - src: ./collections
         dest: /home/gmadappa/ansible/ansible-aiops/collections

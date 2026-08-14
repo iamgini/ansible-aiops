@@ -35,6 +35,9 @@ cac_create_workflow: "{{ lookup('env', 'CAC_CREATE_WORKFLOW') | default(true, tr
 # Workflow auto-launch after creation
 aap_auto_launch_workflow: "{{ lookup('env', 'AAP_AUTO_LAUNCH_WORKFLOW') | default('true', true) }}"
 
+# JT auto-launch after creation (when cac_create_workflow=false)
+aap_auto_launch_jt: "{{ lookup('env', 'AAP_AUTO_LAUNCH_JT') | default('true', true) }}"
+
 # JT SCM branch (defaults to review branch; override to git_default_branch for post-merge use)
 cac_jt_scm_branch: "{{ ai_git_review_branch | default(git_default_branch) }}"
 

@@ -1,0 +1,26 @@
+---
+# Launch the dynamically created job template (when no workflow is used)
+
+- name: Set job template name
+  ansible.builtin.set_fact:
+    jt_launch_name: "{{ aap_jt_prefix }}-{{ event_type }}-{{ event_host | regex_replace('\\.', '-') }}"
+
+- name: Launch job template
+  ansible.controller.job_launch:
+    controller_host: "{{ aap_hostname }}"
+    controller_oauthtoken: "{{ controller_oauthtoken }}"
+    validate_certs: "{{ aap_validate_certs }}"
+    job_template: "{{ jt_launch_name }}"
+    limit: "{{ event_host }}"
+    extra_vars:
+      event_type: "{{ event_type }}"
+      event_host: "{{ event_host }}"
+      event_severity: "{{ event_severity | default('unknown') }}"
+      event_description: "{{ event_description | default('AI-generated remediation') }}"
+    wait: false
+  register: jt_launch_result
+
+- name: Set launch results
+  ansible.builtin.set_fact:
+    cac_jt_launched: true
+    cac_jt_job_id: "{{ jt_launch_result.id | default('') }}"
