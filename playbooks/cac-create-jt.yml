@@ -50,19 +50,13 @@
         msg: "source={{ event_source | default('preset') }} type={{ event_type }} host={{ event_host }} severity={{ event_severity | default('') }}"
       when: event_type is defined
 
-    # --- Derive playbook filename if not provided ---
-    - name: Set ai_playbook_filename from event context
-      ansible.builtin.set_fact:
-        ai_playbook_filename: "{{ event_type }}_{{ event_host | regex_replace('\\.', '-') }}.yml"
-      when: ai_playbook_filename is not defined
-
     - name: Validate required variables
       ansible.builtin.assert:
         that:
           - event_type is defined
           - event_host is defined
-          - ai_playbook_filename is defined
-        fail_msg: "Required: event_type, event_host, ai_playbook_filename (pass via extra_vars or raw_payload)"
+          - ai_playbook_filename is defined and ai_playbook_filename | length > 0
+        fail_msg: "Required: event_type, event_host, ai_playbook_filename (passed from JT1 via set_stats or extra_vars)"
 
     - name: Create JT via CaC Manager
       ansible.builtin.include_role:

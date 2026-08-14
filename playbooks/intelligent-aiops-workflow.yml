@@ -126,6 +126,17 @@
         state: absent
       changed_when: false
 
+    - name: Export artifacts for downstream JTs in AAP workflow
+      ansible.builtin.set_stats:
+        data:
+          ai_playbook_filename: "{{ ai_playbook_filename | default('') }}"
+          event_type: "{{ event_type | default('') }}"
+          event_host: "{{ event_host | default('') }}"
+          event_severity: "{{ event_severity | default('') }}"
+          event_description: "{{ event_description | default('') }}"
+        per_host: false
+      when: ai_generation_completed | default(false)
+
     - name: Workflow Summary
       ansible.builtin.debug:
         msg: >-
@@ -133,6 +144,7 @@
              if mcp_completed else
              'AI Generated' +
              ' | branch=' + (ai_git_review_branch | default('N/A')) +
+             ' | file=' + (ai_playbook_filename | default('N/A')) +
              (' | Review: ' + (ai_review_branch_name | default('N/A')) if ai_review_pushed | default(false) else '') +
              (' | CaC JT=' + (cac_jt_name | default('N/A')) + ' WF=' + (cac_wf_name | default('N/A'))
                if not (cac_after_code_review | bool) else ' | CaC: deferred to post-review') }}

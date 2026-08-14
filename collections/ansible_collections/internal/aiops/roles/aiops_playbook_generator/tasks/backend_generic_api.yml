@@ -56,7 +56,7 @@
 
 - name: Generate playbook filename
   ansible.builtin.set_fact:
-    playbook_filename: "{{ event_type }}_{{ event_host | regex_replace('\\.', '_') }}.yml"
+    playbook_filename: "{{ event_type | regex_replace('[^a-zA-Z0-9]', '_') }}_{{ event_host | regex_replace('[^a-zA-Z0-9]', '_') }}.yml"
 
 - name: Validate generated playbook
   ansible.builtin.include_tasks: validate_playbook.yml
