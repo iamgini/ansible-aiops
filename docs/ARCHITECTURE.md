@@ -130,7 +130,7 @@ Monitoring System → EDA Webhook/Kafka/Source → EDA Rulebook
 │    └─ Fallback: Direct AAP REST API (query_api.yml)       │
 │        When: MCP skipped, not configured, or query fails   │
 │        Flag: mcp_api_fallback (default true)               │
-│        GET /api/v2/job_templates/                          │
+│        GET /api/controller/v2/job_templates/                          │
 │        Authorization: Bearer <token>                       │
 │        → Returns: Same template data via REST              │
 │                                                             │
@@ -254,7 +254,7 @@ Flag: `mcp_api_fallback` (default `true`). Task file: `query_api.yml`.
 └───────────────────────┬──────────────────────────────────────┘
                         │
                         │ AAP REST API
-                        │ /api/v2/job_templates/
+                        │ /api/controller/v2/job_templates/
                         │
                         ▼
 ┌──────────────────────────────────────────────────────────────┐
@@ -278,7 +278,7 @@ directly. Controlled by `mcp_api_fallback` (default `true`). Task file: `query_a
                         │
                         │ HTTP GET
                         │ Authorization: Bearer <token>
-                        │ GET /api/v2/job_templates/
+                        │ GET /api/controller/v2/job_templates/
                         │
                         ▼
 ┌──────────────────────────────────────────────────────────────┐

@@ -200,7 +200,7 @@ The algorithm assigns points based on matches:
 
 ### Adjust Scoring Weights
 
-Edit `collections/ansible_collections/internal/aiops/roles/aiops_mcp_matcher/tasks/main.yml` and modify the scoring section:
+Edit `collections/ansible_collections/internal/aiops/roles/aiops_mcp_matcher/tasks/jinja_match.yml` and modify the scoring section:
 
 ```yaml
 # Example: Increase service name importance
@@ -216,7 +216,7 @@ To adjust, override the threshold variable:
 
 ```yaml
 # In playbooks/intelligent-aiops-workflow.yml
-- name: Execute MCP matcher role
+- name: Execute template matcher (scoring and launch)
   ansible.builtin.include_role:
     name: internal.aiops.aiops_mcp_matcher
   vars:

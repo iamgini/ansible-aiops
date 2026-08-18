@@ -2,10 +2,11 @@
 
 ## Overview
 
-You need to create **5 AAP job templates** that the EDA rulebook will launch:
+You need to create **6 AAP job templates** that the EDA rulebook and AIOps workflow will launch:
 
 - **4 Known Event Templates** (Cases 1-4) - Direct remediation playbooks
-- **1 AI Intelligence Template** (Case 5) - MCP + Maya workflow
+- **1 AI Intelligence Template** (Case 5) - MCP + AI generation workflow
+- **1 CaC Template** (JT6) - Post-review job template creation
 
 ## Required Job Templates
 
@@ -266,13 +267,14 @@ You need to create **5 AAP job templates** that the EDA rulebook will launch:
 - **Variables:** (Prompted)
   ```yaml
   event_type: ""
-  review_branch: ""               # The git branch containing the reviewed playbook
-  cac_create_workflow: true        # Set false to create JT only (no workflow)
+  event_host: ""
+  ai_playbook_filename: ""        # From JT1 via set_stats, or pass manually
+  cac_create_workflow: false       # JT only (post-review default)
   ```
 - **Prompt on Launch:**
   - Extra Variables
 
-**Note:** This template is launched manually (or via automation) after the AI-generated playbook has been reviewed and approved. It creates the AAP job template (and optionally the approval workflow) pointing to the reviewed branch.
+**Note:** This template runs as JT2 in the AIOps workflow (after approval) or manually post-review. It creates the AAP job template pointing to the `main` branch (post-merge). Skips CaC if `mcp_completed=true` (template already matched by JT1). The `ai_playbook_filename` is passed automatically from JT1 via `set_stats`.
 
 ---
 

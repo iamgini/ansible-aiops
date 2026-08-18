@@ -54,7 +54,7 @@ Complete event-driven intelligent remediation system:
 
 ### 1. Required Services
 
-- ✅ **Ansible Maya** - Running on port 8000
+- ✅ **AI Backend** - Generic AI API / Code Assistant / Coder (configured via env vars)
 - ✅ **AAP/AWX** - Ansible Automation Platform (for Cases 1-4)
 - ⚠️ **AAP MCP Server** - Optional (for unknown event intelligence)
 - ⚠️ **Git Repository** - Optional (for storing generated playbooks)
@@ -113,8 +113,8 @@ export CAC_AFTER_CODE_REVIEW="true"
 ```bash
 cd ~/ansible-aiops
 
-# Check Maya is running
-curl http://localhost:8000/health
+# Check AI backend is reachable
+curl ${GENERIC_AI_API_URL%/chat/completions}/models -H "Authorization: Bearer $GENERIC_AI_API_TOKEN"
 
 # Check required playbooks exist
 ls -l playbooks/execute-aap-job-template.yml
@@ -200,7 +200,7 @@ curl -sk -X POST "${EDA_EVENT_STREAM_URL}" \
 **Expected:**
 - ✅ Rule matched: "Unknown Event - Intelligent AI Workflow"
 - ✅ MCP search executed (if configured)
-- ✅ Maya playbook generated
+- ✅ AI playbook generated
 - ✅ Playbook pushed to git (if GIT_TOKEN set)
 
 ## Configuration
@@ -255,7 +255,9 @@ vars:
 | `mcp_api_fallback` | `true` | `MCP_API_FALLBACK` | Fall back to AAP REST API when MCP is unavailable |
 | `ai_review_enabled` | `false` | `AI_REVIEW_ENABLED` | Run a second AI pass to review the generated playbook; pushes reviewed version to `<branch>_review` |
 | `cac_after_code_review` | `true` | `CAC_AFTER_CODE_REVIEW` | Defer CaC resource creation until after code review. Use `playbooks/cac-create-jt.yml` post-review |
-| `cac_create_workflow` | `true` | N/A | When `false`, CaC creates a JT only (no workflow template) |
+| `cac_create_workflow` | `true` | `CAC_CREATE_WORKFLOW` | When `false`, CaC creates a JT only (no workflow template) |
+| `aap_auto_launch_jt` | `true` | `AAP_AUTO_LAUNCH_JT` | Auto-launch created JT when `cac_create_workflow=false` |
+| `aap_auto_launch_workflow` | `true` | `AAP_AUTO_LAUNCH_WORKFLOW` | Auto-launch created WF after CaC creation |
 
 ## Monitoring
 

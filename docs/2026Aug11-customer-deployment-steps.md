@@ -79,14 +79,15 @@ After code is merged to `main`, run the standalone CaC playbook:
 ansible-navigator run playbooks/cac-create-jt.yml -m stdout \
   -e "event_type=disk_alert" \
   -e "event_host=web-server-01" \
-  -e "ai_playbook_filename=disk_alert_web-server-01.yml"
+  -e "ai_playbook_filename=disk_alert_web_server_01.yml"
 ```
 
 **What this does:**
 
 - Creates/updates the shared project in AAP (pointing to `main`)
 - Creates a Job Template — **JT only, no workflow** — pointing to `main` branch
-- The JT is ready to launch immediately or attach to an existing workflow
+- Auto-launches the JT (`aap_auto_launch_jt=true`, default)
+- Skips CaC entirely if a template was already matched by JT1 (`mcp_completed=true`)
 
 ## Step 5: Run the Remediation
 
@@ -126,6 +127,8 @@ export MCP_API_FALLBACK="false"            # no REST API fallback
 | `cac_create_workflow` | `true` | `CAC_CREATE_WORKFLOW` | Create WF in CaC (false = JT only) |
 | `cac_jt_scm_branch` | review branch | — | Branch the JT points to (override to `main` post-merge) |
 | `mcp_api_fallback` | `true` | `MCP_API_FALLBACK` | Query AAP REST API when MCP unavailable |
+| `aap_auto_launch_jt` | `true` | `AAP_AUTO_LAUNCH_JT` | Auto-launch created JT when `cac_create_workflow=false` |
+| `aap_auto_launch_workflow` | `true` | `AAP_AUTO_LAUNCH_WORKFLOW` | Auto-launch created WF after CaC |
 
 ## Files Changed
 
@@ -135,6 +138,7 @@ export MCP_API_FALLBACK="false"            # no REST API fallback
 playbooks/cac-create-jt.yml
 collections/ansible_collections/internal/aiops/roles/aiops_playbook_generator/tasks/ai_review.yml
 collections/ansible_collections/internal/aiops/roles/aiops_mcp_matcher/tasks/query_api.yml
+collections/ansible_collections/internal/aiops/roles/aiops_cac_manager/tasks/launch_jt.yml
 ```
 
 ### Modified Files

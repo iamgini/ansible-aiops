@@ -60,7 +60,10 @@ The workflow has been refactored from a monolithic playbook into a **local Ansib
 │  └─ Uses ansible.controller modules directly           │
 ├────────────────────────────────────────────────────────┤
 │  Standalone: cac-create-jt.yml                         │
+│  ├─ Parses raw_payload (same event parsers)            │
+│  ├─ Skips if mcp_completed=true (from JT1 set_stats)  │
 │  ├─ Creates JT only (no WF) pointing to main branch   │
+│  ├─ Auto-launches JT (aap_auto_launch_jt=true)        │
 │  └─ Used after code review + merge (deferred CaC)      │
 └────────────────────────────────────────────────────────┘
 ```
@@ -107,7 +110,8 @@ ansible-aiops/
 │               ├── main.yml
 │               ├── authenticate.yml
 │               ├── create_resources.yml  # Uses ansible.controller modules directly
-│               └── launch_workflow.yml
+│               ├── launch_workflow.yml
+│               └── launch_jt.yml        # Auto-launches JT (when cac_create_workflow=false)
 │
 └── docs/
     ├── CODER-INTEGRATION.md
@@ -414,6 +418,8 @@ Roles have sensible defaults in `defaults/main.yml`. Override in inventory or pl
 | `aiops_mcp_matcher` | `mcp_api_fallback` | `true` | Fall back to AAP REST API when MCP unavailable |
 | `aiops_playbook_generator` | `ai_review_enabled` | `false` | Enable AI review pass after generation |
 | `aiops_cac_manager` | `cac_create_workflow` | `true` | Create WF template (set false for JT-only) |
+| `aiops_cac_manager` | `aap_auto_launch_jt` | `true` | Auto-launch created JT when `cac_create_workflow=false` |
+| `aiops_cac_manager` | `aap_auto_launch_workflow` | `true` | Auto-launch created WF after CaC |
 
 **Override example**:
 ```yaml
@@ -538,6 +544,7 @@ After human reviews and merges the AI-generated playbook to main:
 
 ansible-navigator run playbooks/cac-create-jt.yml -m stdout \
   -e "event_type=unknown_error" \
+  -e "event_host=app-server-01" \
   -e "ai_playbook_filename=unknown_error_app_server_01.yml"
 
 Step 1: aiops_cac_manager (cac_create_workflow=false, cac_jt_scm_branch=main)

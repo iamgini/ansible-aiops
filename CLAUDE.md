@@ -20,7 +20,7 @@ All roles live in a local `internal.aiops` collection at `collections/ansible_co
 The centerpiece is `playbooks/intelligent-aiops-workflow.yml` using a **3-play architecture**:
 - **Play 1** (localhost): Parses raw event payload, validates config, generates MCP manifest at runtime, adds `aap_mcp` host via `add_host`
 - **Play 2** (aap_mcp): Queries AAP via `ansible.mcp.run_tool` with `name: job_templates_list`, stores results on localhost via `delegate_facts`
-- **Play 3** (localhost): Runs `internal.aiops.aiops_mcp_matcher` role for scoring, launching, AI generation, and CaC
+- **Play 3** (localhost): Runs `internal.aiops.aiops_mcp_matcher` role for scoring, launching, AI generation, and CaC. Exports `mcp_completed` and `ai_playbook_filename` via `set_stats` for downstream JTs in AAP workflows
 - Uses `ansible.mcp.mcp` connection plugin — MCP host is targeted directly (not via `delegate_to`)
 - **Bearer token passed as `ansible_mcp_bearer_token` host var** in `add_host` (NOT via play-level `environment:` — connection plugin reads host vars before env vars are applied)
 - Auto-launches highest-scoring template via `ansible.controller.job_launch` (using `controller_oauthtoken`) if score >= threshold
@@ -46,7 +46,7 @@ The centerpiece is `playbooks/intelligent-aiops-workflow.yml` using a **3-play a
    - Tag match (each): **+10 points**
    - Files: `tasks/jinja_match.yml`
 
-**MCP is optional** — when MCP is unavailable (no server configured, `skip_mcp=true`, or connection fails), the role automatically falls back to querying the AAP REST API directly (`/api/v2/job_templates/`). This requires `controller_host` and a bearer token. Disable fallback with `mcp_api_fallback=false`.
+**MCP is optional** — when MCP is unavailable (no server configured, `skip_mcp=true`, or connection fails), the role automatically falls back to querying the AAP REST API directly (`/api/controller/v2/job_templates/`). This requires `controller_host` and a bearer token. Disable fallback with `mcp_api_fallback=false`.
 
 **MCP Matcher Role Task Structure** (`aiops_mcp_matcher`):
 - `setup.yml` — MCP config validation, manifest generation, `add_host` for aap_mcp
@@ -89,7 +89,7 @@ Four concrete remediation playbooks launched by AAP job templates (Cases 1-4):
 - `playbooks/remediation_investigate-cpu.yml` — CPU investigation and process analysis
 - `playbooks/remediation_renew-certificate.yml` — SSL certificate renewal
 - `playbooks/hello-world.yaml` — Debug/connectivity test playbook
-- `playbooks/cac-create-jt.yml` — Standalone CaC: creates JT only (post code review, points to main branch)
+- `playbooks/cac-create-jt.yml` — Standalone CaC: creates JT only (post code review, points to main branch). Parses `raw_payload` (same event parsers as main workflow), skips CaC if `mcp_completed=true` (from JT1 via `set_stats`), requires `ai_playbook_filename` from JT1
 
 ### 5. AI Playbook Generation
 
@@ -121,7 +121,8 @@ Pluggable AI backends in `aiops_playbook_generator` role:
 - **Per-event JT** with `scm_branch` set to `cac_jt_scm_branch` (defaults to review branch; override to `main` for post-merge)
 - **Per-event WF** with Approval → Run JT nodes (optional, `cac_create_workflow=true` default)
 - Authenticates via bearer token (preferred) or username/password
-- **Auto-launch**: After creating the workflow, automatically launches it if `aap_auto_launch_workflow=true` (default)
+- **Auto-launch WF**: After creating the workflow, automatically launches it if `aap_auto_launch_workflow=true` (default)
+- **Auto-launch JT**: When `cac_create_workflow=false`, auto-launches the created JT if `aap_auto_launch_jt=true` (default)
 - **Post-review mode**: Set `cac_create_workflow=false` to create JT only (no workflow). Used by `cac-create-jt.yml`.
 
 **CaC workflow toggle** (`cac_after_code_review`, default `true` in main workflow):
@@ -133,6 +134,7 @@ Pluggable AI backends in `aiops_playbook_generator` role:
 - `authenticate.yml` — Bearer token or username/password authentication
 - `create_resources.yml` — Creates project, job template, and optionally workflow template
 - `launch_workflow.yml` — Auto-launches the created workflow (when `cac_create_workflow=true`)
+- `launch_jt.yml` — Auto-launches the created JT (when `cac_create_workflow=false` and `aap_auto_launch_jt=true`)
 
 ## Environment Setup
 
@@ -209,6 +211,7 @@ export AAP_JT_PREFIX="AIOps-AI"
 export AAP_WF_PREFIX="AIOps-WF-AI"
 export AAP_APPROVAL_TIMEOUT="3600"
 export AAP_AUTO_LAUNCH_WORKFLOW="true"
+export AAP_AUTO_LAUNCH_JT="true"
 ```
 
 ### EDA / Workflow Control Variables
@@ -376,7 +379,7 @@ ansible-aiops/
 │       │       │   └── tasks/{main,build_prompt,backend_*,generate_with_retry,validate_playbook,git_push}.yml
 │       │       └── aiops_cac_manager/     # AAP resource creation (JT, WF, project)
 │       │           ├── defaults/main.yml
-│       │           ├── tasks/{main,authenticate,create_resources,launch_workflow}.yml
+│       │           ├── tasks/{main,authenticate,create_resources,launch_workflow,launch_jt}.yml
 │       │           └── templates/{project,job_template,workflow_template}.yml.j2
 │       └── ansible/mcp/                   # Vendored ansible.mcp collection
 ├── tests/
@@ -451,6 +454,8 @@ After deploying, create credential instances in AAP UI and attach them to the AI
 `ansible-navigator.yml` passes the following env vars through to the execution environment:
 - `AAP_MCP_SERVER_URL`, `AAP_BEARER_TOKEN`, `MCP_BEARER_TOKEN`
 - `GENERIC_AI_API_URL`, `GENERIC_AI_API_TOKEN`, `GENERIC_AI_MODEL`, `GENERIC_AI_VALIDATE_CERTS`
+- `AI_REVIEW_ENABLED`, `AI_REVIEW_MODEL`, `AI_REVIEW_API_URL`, `AI_REVIEW_API_TOKEN`, `AI_REVIEW_VALIDATE_CERTS`
+- `MCP_API_FALLBACK`, `AAP_AUTO_LAUNCH_JT`
 
 **Note**: `LIGHTSPEED_*`, `GIT_*`, and `CONTROLLER_*` vars are NOT in the passthrough list. If using those backends with `ansible-navigator`, add them to the `environment-variables.pass` list in `ansible-navigator.yml`.
 
@@ -609,7 +614,7 @@ Example safe auto-launch (uses `ansible.controller.job_launch` with oauthtoken):
 4. Test token with curl:
    ```bash
    curl -H "Authorization: Bearer $AAP_BEARER_TOKEN" \
-        https://controller.example.com/api/v2/job_templates/
+        https://controller.example.com/api/controller/v2/job_templates/
    ```
 
 ### No Templates Matched

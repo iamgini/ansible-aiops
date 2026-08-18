@@ -355,8 +355,15 @@ standalone CaC playbook to create the AAP job template:
 ```bash
 ansible-navigator run playbooks/cac-create-jt.yml -m stdout \
   -e "event_type=database_slow_query" \
-  -e "event_host=db-server-01"
+  -e "event_host=db-server-01" \
+  -e "ai_playbook_filename=database_slow_query_db_server_01.yml"
 ```
+
+`ai_playbook_filename` is required — it must match the exact filename JT1 generated.
+When running as JT2 in an AAP workflow, this is passed automatically from JT1 via
+`set_stats`. The playbook also parses `raw_payload` (same event parsers as the main
+workflow) and skips CaC entirely if `mcp_completed=true` (template already matched
+by JT1).
 
 This playbook creates a job template pointing to the `main` branch (not a review
 branch), so it is safe to launch repeatedly. Use it whenever:
@@ -369,6 +376,9 @@ Control whether a workflow template is also created with `cac_create_workflow`
 (default `true`). To create only the job template, pass
 `-e "cac_create_workflow=false"`. The branch used for the JT SCM reference can
 be overridden with `cac_jt_scm_branch` (defaults to `main`).
+
+When `cac_create_workflow=false`, the JT is auto-launched after creation if
+`aap_auto_launch_jt=true` (default).
 
 ### Phase 3: EDA Activation
 
