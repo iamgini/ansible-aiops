@@ -1,0 +1,122 @@
+---
+# Sample GitLab CI for AI-Generated Playbooks Repository
+#
+# Place this as .gitlab-ci.yml in the generated playbooks repo
+# (e.g., ansible-ai-generated-playbooks)
+#
+# Triggers on aiops/* review branches pushed by the AIOps workflow.
+# Runs lint and optional Molecule tests before human review.
+
+stages:
+  - lint
+  - test
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  ANSIBLE_FORCE_COLOR: "true"
+
+# Only run on AIOps review branches
+.aiops_branch_rules:
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^aiops\//
+    - if: $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^aiops\//
+
+cache:
+  paths:
+    - .cache/pip
+
+# -------------------------------------------------------------------
+# Stage 1: Lint - Can skip if AAP is covering this.
+# -------------------------------------------------------------------
+yamllint:
+  stage: lint
+  image: python:3.12-slim
+  extends: .aiops_branch_rules
+  before_script:
+    - pip install yamllint
+  script:
+    - yamllint -d relaxed playbooks/
+
+syntax-check:
+  stage: lint
+  image: python:3.12-slim
+  extends: .aiops_branch_rules
+  before_script:
+    - pip install ansible-core
+  script:
+    - |
+      for playbook in playbooks/*.yml; do
+        echo "Checking: $playbook"
+        ansible-playbook "$playbook" --syntax-check -i localhost,
+      done
+
+ansible-lint:
+  stage: lint
+  image: python:3.12-slim
+  extends: .aiops_branch_rules
+  before_script:
+    - pip install ansible-lint
+  script:
+    - ansible-lint playbooks/
+  allow_failure: true
+
+# -------------------------------------------------------------------
+# Stage 2: Molecule (optional - requires proper test targets)
+# -------------------------------------------------------------------
+
+# Option A: Molecule with delegated driver (no containers needed)
+# Runs against localhost - suitable for basic validation only
+molecule-delegated:
+  stage: test
+  image: python:3.12-slim
+  extends: .aiops_branch_rules
+  before_script:
+    - pip install molecule ansible-core
+  script:
+    - |
+      if [ -d "molecule" ]; then
+        molecule test --scenario-name default
+      else
+        echo "No molecule scenarios found - skipping"
+      fi
+  allow_failure: true
+  when: manual
+
+# Option B: Molecule with Podman driver (recommended for functional tests)
+# Requires a GitLab runner with Podman available
+# molecule-podman:
+#   stage: test
+#   image: registry.redhat.io/ansible-automation-platform-27/ee-supported-rhel9:latest
+#   extends: .aiops_branch_rules
+#   tags:
+#     - podman
+#   before_script:
+#     - pip install molecule molecule-podman
+#   script:
+#     - |
+#       if [ -d "molecule" ]; then
+#         molecule test --scenario-name default
+#       else
+#         echo "No molecule scenarios found - skipping"
+#       fi
+#   allow_failure: true
+
+# Option C: Molecule with Docker driver (for GitHub-hosted or Docker runners)
+# molecule-docker:
+#   stage: test
+#   image: python:3.12-slim
+#   extends: .aiops_branch_rules
+#   services:
+#     - docker:dind
+#   variables:
+#     DOCKER_HOST: "tcp://docker:2375"
+#   before_script:
+#     - pip install molecule molecule-docker docker
+#   script:
+#     - |
+#       if [ -d "molecule" ]; then
+#         molecule test --scenario-name default
+#       else
+#         echo "No molecule scenarios found - skipping"
+#       fi
+#   allow_failure: true

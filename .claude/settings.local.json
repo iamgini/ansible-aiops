@@ -78,7 +78,9 @@
       "Bash(ansible-builder build *)",
       "Bash(podman images *)",
       "Bash(podman rmi *)",
-      "Bash(podman run *)"
+      "Bash(podman run *)",
+      "WebFetch(domain:ansible.readthedocs.io)",
+      "WebFetch(domain:developers.redhat.com)"
     ]
   }
 }
