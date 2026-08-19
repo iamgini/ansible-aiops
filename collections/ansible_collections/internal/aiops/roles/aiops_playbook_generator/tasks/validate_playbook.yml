@@ -72,7 +72,10 @@
     ai_validation_syntax: "{{ syntax_check_result.rc == 0 }}"
     ai_validation_yamllint: "{{ yamllint_result.rc == 0 if yamllint_check.rc == 0 else 'skipped' }}"
     ai_validation_ansiblelint: "{{ ansiblelint_result.rc == 0 if ansiblelint_check.rc == 0 else 'skipped' }}"
-    ai_validation_passed: "{{ syntax_check_result.rc == 0 }}"
+    ai_validation_passed: >-
+      {{ syntax_check_result.rc == 0
+         and (yamllint_check.rc != 0 or yamllint_result.rc == 0)
+         and (ansiblelint_check.rc != 0 or ansiblelint_result.rc == 0) }}
     ai_validation_errors: "{{ _validation_errors | trim }}"
 
 - name: Clean up temp validation directory
