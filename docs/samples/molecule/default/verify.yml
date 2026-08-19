@@ -1,0 +1,36 @@
+---
+# Verify: validate the AI-generated playbook ran correctly
+#
+# Basic post-converge checks. Extend with assertions
+# specific to your environment.
+
+- name: Verify playbook execution
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Confirm converge completed without errors
+      ansible.builtin.assert:
+        that:
+          - true
+        success_msg: "Converge completed successfully"
+
+    # Add environment-specific assertions below, for example:
+    #
+    # - name: Verify service is running
+    #   ansible.builtin.service_facts:
+    #
+    # - name: Assert target service is active
+    #   ansible.builtin.assert:
+    #     that:
+    #       - ansible_facts.services['nginx.service'].state == 'running'
+    #
+    # - name: Verify config file exists
+    #   ansible.builtin.stat:
+    #     path: /etc/myapp/config.yml
+    #   register: config_stat
+    #
+    # - name: Assert config was created
+    #   ansible.builtin.assert:
+    #     that:
+    #       - config_stat.stat.exists

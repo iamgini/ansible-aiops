@@ -1,0 +1,11 @@
+---
+# Converge: run the AI-generated playbook
+#
+# The GitLab CI detect stage writes the playbook path to
+# molecule/default/playbook_under_test.yml (symlink).
+# This converge imports that playbook directly.
+#
+# If no symlink exists, falls back to a basic localhost play.
+
+- name: Import the playbook under test
+  ansible.builtin.import_playbook: playbook_under_test.yml

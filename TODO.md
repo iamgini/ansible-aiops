@@ -64,6 +64,13 @@ No WF wrapping needed — the remediation JT is launched directly by MCP matcher
 - [ ] Use regex match against AAP job template names/descriptions (via `ansible.controller` API directly)
 - [ ] Toggle via variable (e.g., `use_mcp: true/false`) — default to MCP when available, fall back to regex
 
+## CI/CD for Generated Playbooks
+
+- [ ] Set up Molecule scenario in `ansible-ai-generated-playbooks` repo (skeleton in `docs/samples/molecule/`)
+- [ ] Set up GitLab CI pipeline (sample in `docs/samples/gitlab-ci-molecule.yml`)
+- [ ] Configure GitLab "Pipelines must succeed" to block MR merge on failure
+- [x] Decided against pytest for playbook logic validation — ansible-lint covers structural checks, human review covers logic. AI-generated pytest would just validate its own assumptions.
+
 ## Future Considerations
 
 - [ ] Auto-promote after N successful runs of same event type (threshold-based)

@@ -1,0 +1,43 @@
+---
+# Molecule scenario for AI-generated playbooks
+#
+# Uses delegated driver (no containers needed).
+# Place this under molecule/default/ in the generated playbooks repo.
+#
+# Usage:
+#   molecule test                     # full test sequence
+#   molecule converge                 # run playbook only
+#   molecule verify                   # run verification only
+
+driver:
+  name: default
+  options:
+    managed: false
+    ansible_connection_options:
+      ansible_connection: local
+
+platforms:
+  - name: localhost
+    # Delegated - runs on the CI runner itself
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      remote_tmp: /tmp/.ansible/tmp
+  env:
+    ANSIBLE_VERBOSITY: "1"
+  # playbooks:
+  #   converge: converge.yml
+  #   verify: verify.yml
+
+verifier:
+  name: ansible
+
+scenario:
+  name: default
+  test_sequence:
+    - dependency
+    - syntax
+    - converge
+    - verify

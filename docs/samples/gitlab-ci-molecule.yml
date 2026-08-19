@@ -8,6 +8,7 @@
 # Runs lint and optional Molecule tests before human review.
 
 stages:
+  - detect
   - lint
   - test
 
@@ -26,38 +27,72 @@ cache:
     - .cache/pip
 
 # -------------------------------------------------------------------
+# Stage 0: Detect changed playbook on this branch
+# -------------------------------------------------------------------
+detect-playbook:
+  stage: detect
+  image: alpine/git:latest
+  extends: .aiops_branch_rules
+  script:
+    - git fetch origin main:refs/remotes/origin/main
+    - CHANGED=$(git diff --name-only origin/main -- playbooks/ | grep '\.yml$' || true)
+    - |
+      if [ -z "$CHANGED" ]; then
+        echo "No new playbooks found on this branch"
+        exit 1
+      fi
+    - echo "Changed playbooks:"
+    - echo "$CHANGED"
+    - echo "$CHANGED" > changed_playbooks.txt
+  artifacts:
+    paths:
+      - changed_playbooks.txt
+    expire_in: 1 hour
+
+# -------------------------------------------------------------------
 # Stage 1: Lint - Can skip if AAP is covering this.
 # -------------------------------------------------------------------
 yamllint:
   stage: lint
   image: python:3.12-slim
   extends: .aiops_branch_rules
+  needs: [detect-playbook]
   before_script:
     - pip install yamllint
   script:
-    - yamllint -d relaxed playbooks/
+    - |
+      while IFS= read -r playbook; do
+        echo "yamllint: $playbook"
+        yamllint -d relaxed "$playbook"
+      done < changed_playbooks.txt
 
 syntax-check:
   stage: lint
   image: python:3.12-slim
   extends: .aiops_branch_rules
+  needs: [detect-playbook]
   before_script:
     - pip install ansible-core
   script:
     - |
-      for playbook in playbooks/*.yml; do
-        echo "Checking: $playbook"
+      while IFS= read -r playbook; do
+        echo "syntax-check: $playbook"
         ansible-playbook "$playbook" --syntax-check -i localhost,
-      done
+      done < changed_playbooks.txt
 
 ansible-lint:
   stage: lint
   image: python:3.12-slim
   extends: .aiops_branch_rules
+  needs: [detect-playbook]
   before_script:
     - pip install ansible-lint
   script:
-    - ansible-lint playbooks/
+    - |
+      while IFS= read -r playbook; do
+        echo "ansible-lint: $playbook"
+        ansible-lint "$playbook"
+      done < changed_playbooks.txt
   allow_failure: true
 
 # -------------------------------------------------------------------
@@ -70,17 +105,23 @@ molecule-delegated:
   stage: test
   image: python:3.12-slim
   extends: .aiops_branch_rules
+  needs: [detect-playbook]
   before_script:
     - pip install molecule ansible-core
   script:
     - |
-      if [ -d "molecule" ]; then
-        molecule test --scenario-name default
-      else
+      if [ ! -d "molecule" ]; then
         echo "No molecule scenarios found - skipping"
+        exit 0
       fi
-  allow_failure: true
-  when: manual
+      PLAYBOOK=$(head -1 changed_playbooks.txt)
+      if [ -z "$PLAYBOOK" ]; then
+        echo "No playbook detected - skipping"
+        exit 0
+      fi
+      echo "Testing playbook: $PLAYBOOK"
+      ln -sf "$(pwd)/$PLAYBOOK" molecule/default/playbook_under_test.yml
+      molecule test --scenario-name default
 
 # Option B: Molecule with Podman driver (recommended for functional tests)
 # Requires a GitLab runner with Podman available
