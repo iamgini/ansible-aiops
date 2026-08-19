@@ -73,7 +73,12 @@
       "Bash(grep *)",
       "Bash(ansible-lint --version)",
       "Bash(ansible-lint -p --nocolor)",
-      "Bash(ansible-lint -p --nocolor --offline)"
+      "Bash(ansible-lint -p --nocolor --offline)",
+      "Bash(ansible-builder --version)",
+      "Bash(ansible-builder build *)",
+      "Bash(podman images *)",
+      "Bash(podman rmi *)",
+      "Bash(podman run *)"
     ]
   }
 }
